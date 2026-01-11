@@ -14,6 +14,9 @@ import { dispatchAgentTool, handleDispatchAgent } from "./tools/dispatch-agent.j
 import { getAgentStatusTool, handleGetAgentStatus } from "./tools/get-agent-status.js";
 import { assignTaskTool, handleAssignTask } from "./tools/assign-task.js";
 import { mergeWorktreeTool, handleMergeWorktree } from "./tools/merge-worktree.js";
+import { summarizeSessionTool, handleSummarizeSession } from "./tools/summarize-session.js";
+import { saveStateTool, handleSaveState } from "./tools/save-state.js";
+import { restoreStateTool, handleRestoreState } from "./tools/restore-state.js";
 export const globalState = {
     agents: new Map(),
     tasks: new Map(),
@@ -41,6 +44,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             getAgentStatusTool,
             assignTaskTool,
             mergeWorktreeTool,
+            summarizeSessionTool,
+            saveStateTool,
+            restoreStateTool,
         ],
     };
 });
@@ -56,6 +62,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             return handleAssignTask(args);
         case "avengers_merge_worktree":
             return handleMergeWorktree(args);
+        case "avengers_summarize_session":
+            return handleSummarizeSession(args);
+        case "avengers_save_state":
+            return handleSaveState(args);
+        case "avengers_restore_state":
+            return handleRestoreState(args);
         default:
             return {
                 content: [{ type: "text", text: `Unknown tool: ${name}` }],
