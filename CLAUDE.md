@@ -212,10 +212,14 @@ avengers_dispatch_agent({
 
 | 도구 | 설명 | 주요 파라미터 |
 |------|------|--------------|
-| `avengers_dispatch_agent` | 에이전트 호출 | agent, task, worktree |
+| `avengers_dispatch_agent` | 에이전트 호출 (M4 강화) | agent, task, worktree, context, mode, dependencies |
 | `avengers_get_agent_status` | 상태 조회 | agent (optional) |
 | `avengers_assign_task` | 작업 생성 | title, assignee, dependencies |
 | `avengers_merge_worktree` | Worktree 병합 | worktreePath, targetBranch, createPR |
+| `avengers_collect_results` | 백그라운드 결과 수집 (M4) | taskIds, timeout, format |
+| `avengers_save_state` | 세션 상태 저장 (M3) | key, includeAgents, includeTasks |
+| `avengers_restore_state` | 세션 상태 복구 (M3) | key |
+| `avengers_summarize_session` | 세션 요약 생성 (M3) | format, includeMetrics |
 
 ### avengers-skills
 
@@ -318,10 +322,81 @@ avengers_dispatch_agent({
 
 ---
 
+## 병렬 에이전트 패턴 (M4)
+
+### Background Task 기반 병렬 실행
+
+```typescript
+// 명시적 컨텍스트와 함께 에이전트 디스패치
+avengers_dispatch_agent({
+  agent: "ironman",
+  task: "React 컴포넌트 구현",
+  worktree: true,
+  mode: "background",  // 백그라운드 실행
+  context: {
+    files: ["src/components/Login.tsx"],
+    snippets: [{ path: "src/types.ts", lines: [10, 50] }],
+    references: ["https://react.dev"]
+  },
+  acceptanceCriteria: ["테스트 통과", "타입 안전성"],
+  constraints: ["기존 스타일 유지"]
+})
+```
+
+### 결과 수집
+
+```typescript
+// 여러 백그라운드 작업 결과 집계
+avengers_collect_results({
+  taskIds: ["T001", "T002", "T003"],
+  timeout: 60000,  // 60초 대기
+  format: "summary"  // summary | detailed | json
+})
+```
+
+### 컨텍스트 오염 방지
+
+1. **명시적 컨텍스트**: 필요한 파일/스니펫만 전달
+2. **Worktree 격리**: 각 에이전트가 독립 브랜치에서 작업
+3. **결과 선택적 소비**: 필요한 결과만 메인 컨텍스트로 가져오기
+
+---
+
+## 효율성 패턴 (M3)
+
+### 상태 저장/복구
+
+```typescript
+// 작업 중단 전 상태 저장
+avengers_save_state({
+  key: "feature-auth",
+  includeAgents: true,
+  includeTasks: true
+})
+
+// 다음 세션에서 복구
+avengers_restore_state({ key: "feature-auth" })
+```
+
+### 세션 요약
+
+```typescript
+// 현재 세션 상태 요약
+avengers_summarize_session({
+  format: "markdown",
+  includeMetrics: true
+})
+```
+
+---
+
 ## 참고 문서
 
 - `skills/tdd/SKILL.md` - TDD 상세 가이드
 - `skills/brainstorming/SKILL.md` - 브레인스토밍 가이드
 - `skills/code-review/SKILL.md` - 코드 리뷰 가이드
+- `skills/parallel-agents/SKILL.md` - 병렬 에이전트 패턴 (M4)
+- `skills/efficiency/SKILL.md` - 효율성 가이드 (M3)
+- `skills/evaluation/SKILL.md` - 평가 프레임워크 (M1)
 - `reference/docs/*.md` - Claude Code 공식 문서
-- `Requirements.md` - 프로젝트 요구사항
+- `docs/FEATURES.md` - 기능 상세 문서

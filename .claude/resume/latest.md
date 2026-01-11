@@ -52,6 +52,16 @@ mcp-servers/avengers-core/tests/
 
 ---
 
+## Phase 1 문서화 완료
+
+| 문서 | 설명 |
+|------|------|
+| `README.md` | 프로젝트 개요, 설치법, 아키텍처 다이어그램 |
+| `CLAUDE.md` | M3/M4 도구 추가, 병렬 패턴 섹션 |
+| `docs/FEATURES.md` | MCP API 레퍼런스, 상세 기능 문서 |
+
+---
+
 ## 다음 작업 (Milestone 5)
 
 외부 연동 - OpenCode 통합:
