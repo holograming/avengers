@@ -6,8 +6,8 @@
 
 ## 마지막 커밋
 
-- **Hash:** `f89904c`
-- **Message:** feat(evals): Implement Milestone 1 - AI Agent Evaluation System
+- **Hash:** `59a4306`
+- **Message:** feat(skills): Implement Milestone 2 - Specialized Skills
 - **Branch:** master
 
 ---
@@ -16,35 +16,35 @@
 
 | Milestone | 상태 | 커밋 | 설명 |
 |-----------|------|------|------|
-| **M1: 평가 시스템** | ✅ 완료 | `f89904c` | 07 문서 기반 평가 프레임워크 |
-| M2: 특수 스킬 | ⏳ 대기 | - | Frontend, Backend, C++, Debugging, CI/CD |
-| M3: 효율성 시스템 | ⏳ 대기 | - | 토큰 절약, 상태 저장/복구 |
-| M4: Ultron 시스템 | ⏳ 대기 | - | tmux 기반 병렬 Claude |
-| M5: 외부 연동 | ⏳ 대기 | - | OpenCode 연동 |
+| **M1: 평가 시스템** | Completed | `f89904c` | 07 문서 기반 평가 프레임워크 |
+| **M2: 특수 스킬** | Completed | `59a4306` | Frontend, Backend, Debugging, CI/CD |
+| M3: 효율성 시스템 | Pending | - | 토큰 절약, 상태 저장/복구 |
+| M4: Ultron 시스템 | Pending | - | tmux 기반 병렬 Claude |
+| M5: 외부 연동 | Pending | - | OpenCode 연동 |
 
 ---
 
-## M1 완료 산출물
+## M2 완료 산출물
 
 ```
-skills/evaluation/SKILL.md              # Vision 작성
-tests/evals/                            # Groot 작성 (5개 테스트)
-docs/agent-metrics/                     # Dr.Strange 작성 (5개 문서)
-reference/analysis/07-evals-insights.md # Jarvis 작성
+skills/specialized/
+├── frontend/SKILL.md              # React, Vue, CSS, Testing, A11y
+├── backend/SKILL.md               # API, DB, Auth, Caching, Security
+├── systematic-debugging/SKILL.md  # Scientific debugging methodology
+└── cicd/SKILL.md                  # GitHub Actions, Docker, Deployment
 ```
 
 ---
 
-## 다음 작업 (Milestone 2)
+## 다음 작업 (Milestone 3)
 
-고병렬 모드로 4개 에이전트 동시 디스패치:
+효율성 시스템 구현:
 
 | 에이전트 | 작업 | 산출물 |
 |---------|------|--------|
-| IronMan | Frontend 스킬 정의 | `skills/specialized/frontend/SKILL.md` |
-| Natasha | Backend 스킬 정의 | `skills/specialized/backend/SKILL.md` |
-| Jarvis | Systematic-debugging 스킬 조사 | `skills/specialized/systematic-debugging/SKILL.md` |
-| Vision | CI/CD 스킬 문서화 | `skills/specialized/cicd/SKILL.md` |
+| Dr.Strange | 토큰 절약 아키텍처 설계 | `skills/efficiency/SKILL.md` |
+| IronMan | 상태 저장/복구 구현 | `mcp-servers/avengers-core/src/tools/save-state.ts` |
+| Natasha | 세션 요약 기능 구현 | `mcp-servers/avengers-core/src/tools/summarize-session.ts` |
 
 ---
 
@@ -59,12 +59,11 @@ reference/analysis/07-evals-insights.md # Jarvis 작성
 다음 세션에서 사용:
 
 ```
-Milestone 1 완료됨 (commit f89904c).
+Milestone 1, 2 완료됨 (commits f89904c, 59a4306).
 Plan: .claude/plans/sleepy-conjuring-charm.md
 
-Milestone 2 시작 - 4개 에이전트 고병렬 디스패치:
-- IronMan: Frontend 스킬
-- Natasha: Backend 스킬
-- Jarvis: Systematic-debugging 스킬
-- Vision: CI/CD 스킬
+Milestone 3 시작 - 효율성 시스템:
+- Dr.Strange: 토큰 절약 설계
+- IronMan: 상태 저장/복구
+- Natasha: 세션 요약
 ```

@@ -1,0 +1,15 @@
+{
+  "name": "avengers-evals",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "eval": "npx tsx index.ts",
+    "eval:agent": "npx tsx index.ts agent-coordination",
+    "eval:tools": "npx tsx index.ts tool-usage",
+    "eval:regression": "npx tsx index.ts regression",
+    "eval:capability": "npx tsx index.ts capability"
+  },
+  "dependencies": {
+    "tsx": "^4.0.0"
+  }
+}

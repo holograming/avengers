@@ -13,10 +13,6 @@
     "enabled": true,
     "directory": "skills"
   },
-  "hooks": {
-    "enabled": true,
-    "directory": "hooks"
-  },
   "commands": {
     "enabled": true,
     "prefix": "avengers"

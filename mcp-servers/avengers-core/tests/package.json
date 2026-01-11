@@ -1,0 +1,12 @@
+{
+  "name": "avengers-core-tests",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "npx tsx integration.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "tsx": "^4.0.0"
+  }
+}
