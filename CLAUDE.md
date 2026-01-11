@@ -258,6 +258,63 @@ avengers_dispatch_agent({
 3. **코드 리뷰 필수**: 병합 전 리뷰 승인 필요
 4. **의존성 관리**: 작업 간 의존성 명시적으로 정의
 5. **상태 확인**: 작업 시작 전 에이전트 상태 확인
+6. **프로젝트 내 상태 저장**: Plan 파일과 세션 정보는 프로젝트의 `.claude/` 디렉토리에 저장
+
+---
+
+## 상태 저장 및 Resume
+
+### 디렉토리 구조
+
+```
+.claude/
+├── commands/          # 커스텀 슬래시 커맨드
+├── plans/             # 로드맵 및 계획 파일
+│   └── <plan-name>.md # 현재 진행 중인 계획
+├── resume/            # Resume 정보 (선택)
+│   └── latest.md      # 마지막 세션 상태
+└── settings.json      # 프로젝트 설정
+```
+
+### Plan 파일 저장 규칙
+
+**중요**: Plan 파일은 반드시 프로젝트 내 `.claude/plans/` 디렉토리에 저장합니다.
+- 사용자 홈 디렉토리(`~/.claude/plans/`)가 아닌 프로젝트 디렉토리 사용
+- 계획 파일은 git에 커밋하여 버전 관리 가능
+- 팀원 간 계획 공유 용이
+
+```typescript
+// 올바른 경로
+.claude/plans/roadmap.md
+.claude/plans/milestone-1.md
+
+// 잘못된 경로 (사용 금지)
+~/.claude/plans/...
+/Users/<user>/.claude/plans/...
+```
+
+### Resume 정보 저장
+
+세션 종료 시 Resume 정보를 `.claude/resume/latest.md`에 저장:
+
+```markdown
+# Resume 정보
+
+## 마지막 커밋
+- Hash: <commit-hash>
+- Message: <commit-message>
+
+## 완료된 Milestone
+- [x] Milestone 1: 설명
+- [ ] Milestone 2: 설명
+
+## 다음 작업
+- 작업 1 설명
+- 작업 2 설명
+
+## 진행 중인 에이전트
+- Agent: task description
+```
 
 ---
 
