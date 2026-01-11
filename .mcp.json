@@ -1,15 +1,15 @@
 {
   "mcpServers": {
     "avengers-core": {
-      "command": "npx",
-      "args": ["ts-node", "mcp-servers/avengers-core/src/index.ts"],
+      "command": "node",
+      "args": ["/Users/devman/Dev/cpp-claude/Avengers/mcp-servers/avengers-core/dist/index.js"],
       "env": {
         "NODE_ENV": "development"
       }
     },
     "avengers-skills": {
-      "command": "npx",
-      "args": ["ts-node", "mcp-servers/avengers-skills/src/index.ts"],
+      "command": "node",
+      "args": ["/Users/devman/Dev/cpp-claude/Avengers/mcp-servers/avengers-skills/dist/index.js"],
       "env": {
         "NODE_ENV": "development"
       }
