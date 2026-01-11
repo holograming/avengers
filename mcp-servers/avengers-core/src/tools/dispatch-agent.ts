@@ -3,81 +3,91 @@
  *
  * 특정 Avengers 에이전트를 태스크에 디스패치합니다.
  * 워크트리 생성 옵션으로 병렬 작업을 지원합니다.
+ *
+ * Enhanced for M4: Background Task integration with explicit context,
+ * execution modes, and dependency management.
  */
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { globalState, AgentState } from "../index.js";
+import { globalState } from "../index.js";
 import { execSync } from "child_process";
+import {
+  AgentType,
+  CodeSnippet,
+  agentRoles,
+  agentPermissions,
+  assembleAgentPrompt,
+  buildTaskContext
+} from "../agent-templates.js";
 
-// 에이전트별 역할 및 권한 정의
-const agentConfig: Record<string, { role: string; permissions: string[]; systemPrompt: string }> = {
-  captain: {
-    role: "orchestrator",
-    permissions: ["readonly"],
-    systemPrompt: `You are Captain, the Avengers orchestrator.
-- You DO NOT write code directly
-- You delegate tasks to appropriate team members
-- You monitor progress and coordinate work
-- You ensure TDD principles are followed
-- You manage worktrees for parallel work`
-  },
-  ironman: {
-    role: "fullstack-developer",
-    permissions: ["edit", "bash", "write", "read"],
-    systemPrompt: `You are IronMan, a fullstack developer.
-- Follow TDD: RED (write failing test) → GREEN (minimal code) → REFACTOR
-- Use React/Vue for frontend, Node.js/Python for backend
-- Write clean, maintainable code
-- Document your work`
-  },
-  natasha: {
-    role: "backend-developer",
-    permissions: ["edit", "bash", "write", "read"],
-    systemPrompt: `You are Natasha, a backend specialist.
-- Design secure, scalable APIs
-- Use OpenAPI/Swagger for documentation
-- Follow security best practices (OWASP)
-- Optimize database queries and indices`
-  },
-  groot: {
-    role: "test-specialist",
-    permissions: ["read", "write-test-only"],
-    systemPrompt: `You are Groot, a test specialist.
-- You ONLY write test code, never production code
-- Follow test pyramid: unit > integration > e2e
-- Ensure high test coverage
-- Report test results clearly
-- I am Groot!`
-  },
-  jarvis: {
-    role: "researcher",
-    permissions: ["readonly", "web-search"],
-    systemPrompt: `You are Jarvis, an information specialist.
-- Research technologies and best practices
-- Analyze documentation and APIs
-- Compare libraries and frameworks
-- Provide structured research reports`
-  },
-  "dr-strange": {
-    role: "planner",
-    permissions: ["readonly"],
-    systemPrompt: `You are Dr. Strange, a strategist and planner.
-- Analyze requirements and constraints
-- Design UI/UX flows
-- Create detailed implementation plans
-- Simulate different approaches
-- Identify optimal solutions`
-  },
-  vision: {
-    role: "documentarian",
-    permissions: ["write-docs-only"],
-    systemPrompt: `You are Vision, a documentation specialist.
-- Write README, API docs, and guides
-- Create architecture diagrams (Mermaid)
-- Analyze images and screenshots
-- Keep documentation up-to-date`
-  }
-};
+// Valid agent types
+const VALID_AGENTS: AgentType[] = [
+  "captain",
+  "ironman",
+  "natasha",
+  "groot",
+  "jarvis",
+  "dr-strange",
+  "vision"
+];
+
+/**
+ * Enhanced dispatch agent parameters interface
+ * Based on M4 design: .claude/designs/m4-parallel-patterns.md
+ */
+export interface DispatchAgentParams {
+  agent: AgentType;
+  task: string;
+
+  // Explicit context (NEW)
+  context?: {
+    files?: string[];           // Files to include
+    snippets?: CodeSnippet[];   // Specific code sections
+    references?: string[];      // URLs or doc paths
+  };
+
+  // Existing parameters
+  worktree?: boolean;
+  priority?: "critical" | "high" | "medium" | "low";
+
+  // Execution mode (NEW)
+  mode?: "background" | "foreground";  // default: background
+
+  // Output handling (NEW)
+  outputFormat?: "summary" | "json" | "full";
+
+  // Dependencies (NEW)
+  dependencies?: string[];  // Task IDs that must complete first
+
+  // Additional task metadata (NEW)
+  acceptanceCriteria?: string[];
+  constraints?: string[];
+}
+
+/**
+ * Dispatch response structure
+ */
+export interface DispatchResponse {
+  taskId: string;
+  agent: AgentType;
+  status: "dispatched" | "queued" | "blocked";
+  role: string;
+  permissions: string[];
+  worktree?: string;
+  branchName?: string;
+  priority: string;
+  mode: "background" | "foreground";
+  outputFormat: "summary" | "json" | "full";
+  dependencies?: string[];
+  blockedBy?: string[];  // Pending dependencies
+  estimatedDuration?: string;
+  agentPrompt: string;
+  contextSummary: {
+    filesCount: number;
+    snippetsCount: number;
+    referencesCount: number;
+  };
+}
 
 export const dispatchAgentTool: Tool = {
   name: "avengers_dispatch_agent",
@@ -94,6 +104,39 @@ export const dispatchAgentTool: Tool = {
         type: "string",
         description: "Detailed task description for the agent"
       },
+      context: {
+        type: "object",
+        description: "Explicit context for the agent (prevents context contamination)",
+        properties: {
+          files: {
+            type: "array",
+            items: { type: "string" },
+            description: "File paths to include in context"
+          },
+          snippets: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                path: { type: "string" },
+                lines: {
+                  type: "array",
+                  items: { type: "number" },
+                  minItems: 2,
+                  maxItems: 2
+                }
+              },
+              required: ["path", "lines"]
+            },
+            description: "Specific code sections to reference"
+          },
+          references: {
+            type: "array",
+            items: { type: "string" },
+            description: "URLs or documentation paths for reference"
+          }
+        }
+      },
       worktree: {
         type: "boolean",
         description: "Whether to create a git worktree for isolated work",
@@ -104,30 +147,123 @@ export const dispatchAgentTool: Tool = {
         enum: ["critical", "high", "medium", "low"],
         description: "Task priority level",
         default: "medium"
+      },
+      mode: {
+        type: "string",
+        enum: ["background", "foreground"],
+        description: "Execution mode: background (async) or foreground (sync)",
+        default: "background"
+      },
+      outputFormat: {
+        type: "string",
+        enum: ["summary", "json", "full"],
+        description: "Expected output format from the agent",
+        default: "summary"
+      },
+      dependencies: {
+        type: "array",
+        items: { type: "string" },
+        description: "Task IDs that must complete before this task starts"
+      },
+      acceptanceCriteria: {
+        type: "array",
+        items: { type: "string" },
+        description: "Specific acceptance criteria for the task"
+      },
+      constraints: {
+        type: "array",
+        items: { type: "string" },
+        description: "Additional constraints for the agent"
       }
     },
     required: ["agent", "task"]
   }
 };
 
-export async function handleDispatchAgent(args: Record<string, unknown>) {
-  const { agent, task, worktree, priority } = args as {
-    agent: string;
-    task: string;
-    worktree?: boolean;
-    priority?: string;
+/**
+ * Check if all dependencies are satisfied
+ */
+function checkDependencies(dependencies: string[]): {
+  satisfied: boolean;
+  pending: string[];
+} {
+  const pending: string[] = [];
+
+  for (const depId of dependencies) {
+    const depTask = globalState.tasks.get(depId);
+    if (!depTask || depTask.status !== "completed") {
+      pending.push(depId);
+    }
+  }
+
+  return {
+    satisfied: pending.length === 0,
+    pending
+  };
+}
+
+/**
+ * Estimate task duration based on agent and context
+ */
+function estimateDuration(
+  agent: AgentType,
+  context?: DispatchAgentParams["context"]
+): string {
+  // Base estimates per agent type (in minutes)
+  const baseEstimates: Record<AgentType, number> = {
+    captain: 5,
+    ironman: 30,
+    natasha: 25,
+    groot: 20,
+    jarvis: 15,
+    "dr-strange": 20,
+    vision: 15
   };
 
-  // 에이전트 유효성 검사
-  const config = agentConfig[agent];
-  if (!config) {
+  let estimate = baseEstimates[agent];
+
+  // Adjust based on context complexity
+  if (context) {
+    const filesCount = context.files?.length || 0;
+    const snippetsCount = context.snippets?.length || 0;
+
+    // Add ~5 min per file, ~2 min per snippet
+    estimate += filesCount * 5 + snippetsCount * 2;
+  }
+
+  if (estimate < 60) {
+    return `~${estimate} minutes`;
+  } else {
+    const hours = Math.round(estimate / 60 * 10) / 10;
+    return `~${hours} hours`;
+  }
+}
+
+export async function handleDispatchAgent(args: Record<string, unknown>) {
+  const params = args as unknown as DispatchAgentParams;
+
+  const {
+    agent,
+    task,
+    context,
+    worktree = false,
+    priority = "medium",
+    mode = "background",
+    outputFormat = "summary",
+    dependencies = [],
+    acceptanceCriteria = [],
+    constraints = []
+  } = params;
+
+  // Validate agent
+  if (!VALID_AGENTS.includes(agent)) {
     return {
-      content: [{ type: "text", text: `Unknown agent: ${agent}` }],
+      content: [{ type: "text", text: `Unknown agent: ${agent}. Valid agents: ${VALID_AGENTS.join(", ")}` }],
       isError: true,
     };
   }
 
-  // 에이전트 상태 확인
+  // Check agent availability
   const agentState = globalState.agents.get(agent);
   if (agentState?.status === "working") {
     return {
@@ -139,75 +275,116 @@ export async function handleDispatchAgent(args: Record<string, unknown>) {
     };
   }
 
-  // 태스크 ID 생성
+  // Check dependencies
+  const depCheck = checkDependencies(dependencies);
+  const taskStatus = depCheck.satisfied ? "dispatched" : "queued";
+
+  // Generate task ID
   const taskId = `T${String(++globalState.taskCounter).padStart(3, "0")}`;
 
-  // 워크트리 생성 (선택적)
+  // Create worktree if requested
   let worktreePath: string | undefined;
+  let branchName: string | undefined;
+
   if (worktree) {
-    const branchName = `feature/${taskId}-${agent}`;
+    branchName = `feature/${taskId}-${agent}`;
     worktreePath = `../avengers-${taskId}`;
-    try {
-      execSync(`git worktree add ${worktreePath} -b ${branchName}`, { encoding: "utf-8" });
-    } catch (error) {
-      // 워크트리 생성 실패 시 경고만 (계속 진행)
-      console.error(`Warning: Could not create worktree: ${error}`);
-      worktreePath = undefined;
+
+    // Only create worktree if task is not blocked
+    if (depCheck.satisfied) {
+      try {
+        execSync(`git worktree add ${worktreePath} -b ${branchName}`, {
+          encoding: "utf-8",
+          stdio: "pipe"
+        });
+      } catch (error) {
+        console.error(`Warning: Could not create worktree: ${error}`);
+        worktreePath = undefined;
+        branchName = undefined;
+      }
+    } else {
+      // Defer worktree creation for queued tasks
+      worktreePath = `(pending) ../avengers-${taskId}`;
     }
   }
 
-  // 상태 업데이트
+  // Build task context
+  const taskContext = buildTaskContext({
+    taskId,
+    agent,
+    task,
+    context,
+    worktreePath: worktreePath?.startsWith("(pending)") ? undefined : worktreePath,
+    branchName,
+    outputFormat,
+    acceptanceCriteria,
+    constraints
+  });
+
+  // Assemble the complete agent prompt
+  const agentPrompt = assembleAgentPrompt(agent, taskContext);
+
+  // Update global state
   globalState.agents.set(agent, {
     name: agent,
-    status: "working",
+    status: depCheck.satisfied ? "working" : "blocked",
     currentTask: taskId,
-    worktree: worktreePath,
+    worktree: worktreePath?.startsWith("(pending)") ? undefined : worktreePath,
   });
 
   globalState.tasks.set(taskId, {
     id: taskId,
     title: task.substring(0, 100),
     assignee: agent,
-    status: "in_progress",
-    worktree: worktreePath,
+    status: depCheck.satisfied ? "in_progress" : "pending",
+    worktree: worktreePath?.startsWith("(pending)") ? undefined : worktreePath,
   });
 
-  // 응답 구성
-  const response = {
+  // Build response
+  const response: DispatchResponse = {
     taskId,
     agent,
-    role: config.role,
-    permissions: config.permissions,
+    status: taskStatus,
+    role: agentRoles[agent],
+    permissions: agentPermissions[agent],
     worktree: worktreePath,
-    priority: priority || "medium",
-    systemPrompt: config.systemPrompt,
-    task,
-    instructions: `
-## Task Assignment
-
-**Task ID**: ${taskId}
-**Agent**: ${agent} (${config.role})
-**Priority**: ${priority || "medium"}
-${worktreePath ? `**Worktree**: ${worktreePath}` : ""}
-
-### Your Mission
-${task}
-
-### Guidelines
-${config.systemPrompt}
-
-### Permissions
-You are allowed to: ${config.permissions.join(", ")}
-
-### Reporting
-When complete, report:
-1. What you implemented/did
-2. Files changed
-3. Test results (if applicable)
-4. Any issues encountered
-`
+    branchName,
+    priority,
+    mode,
+    outputFormat,
+    dependencies: dependencies.length > 0 ? dependencies : undefined,
+    blockedBy: depCheck.pending.length > 0 ? depCheck.pending : undefined,
+    estimatedDuration: estimateDuration(agent, context),
+    agentPrompt,
+    contextSummary: {
+      filesCount: context?.files?.length || 0,
+      snippetsCount: context?.snippets?.length || 0,
+      referencesCount: context?.references?.length || 0
+    }
   };
 
+  // Format output based on mode
+  if (mode === "background") {
+    // For background mode, return minimal info with task ID for tracking
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          taskId: response.taskId,
+          agent: response.agent,
+          status: response.status,
+          worktree: response.worktree,
+          estimatedDuration: response.estimatedDuration,
+          blockedBy: response.blockedBy,
+          message: depCheck.satisfied
+            ? `Agent ${agent} dispatched for task ${taskId}. Use avengers_get_agent_status to monitor progress.`
+            : `Task ${taskId} queued. Waiting for dependencies: ${depCheck.pending.join(", ")}`
+        }, null, 2)
+      }],
+    };
+  }
+
+  // For foreground mode, return full response with prompt
   return {
     content: [{
       type: "text",
