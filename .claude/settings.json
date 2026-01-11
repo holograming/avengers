@@ -1,0 +1,34 @@
+{
+  "project": {
+    "name": "Avengers",
+    "description": "AI 멀티 에이전트 기반 개발 시스템",
+    "version": "1.0.0"
+  },
+  "agents": {
+    "enabled": true,
+    "directory": "agents",
+    "defaultOrchestrator": "captain"
+  },
+  "skills": {
+    "enabled": true,
+    "directory": "skills"
+  },
+  "hooks": {
+    "enabled": true,
+    "directory": "hooks"
+  },
+  "commands": {
+    "enabled": true,
+    "prefix": "avengers"
+  },
+  "workflow": {
+    "tddEnforced": true,
+    "worktreeParallel": true,
+    "codeReviewRequired": true
+  },
+  "tokenOptimization": {
+    "progressiveDisclosure": true,
+    "contextIsolation": true,
+    "summarization": true
+  }
+}

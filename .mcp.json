@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "avengers-core": {
+      "command": "npx",
+      "args": ["ts-node", "mcp-servers/avengers-core/src/index.ts"],
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    "avengers-skills": {
+      "command": "npx",
+      "args": ["ts-node", "mcp-servers/avengers-skills/src/index.ts"],
+      "env": {
+        "NODE_ENV": "development"
+      }
+    }
+  }
+}
