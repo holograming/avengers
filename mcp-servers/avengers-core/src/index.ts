@@ -22,6 +22,7 @@ import { mergeWorktreeTool, handleMergeWorktree } from "./tools/merge-worktree.j
 import { summarizeSessionTool, handleSummarizeSession } from "./tools/summarize-session.js";
 import { saveStateTool, handleSaveState } from "./tools/save-state.js";
 import { restoreStateTool, handleRestoreState } from "./tools/restore-state.js";
+import { collectResultsTool, handleCollectResults } from "./tools/collect-results.js";
 
 // 전역 상태 관리
 export interface AgentState {
@@ -75,6 +76,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       summarizeSessionTool,
       saveStateTool,
       restoreStateTool,
+      collectResultsTool,
     ],
   };
 });
@@ -98,6 +100,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return handleSaveState(args);
     case "avengers_restore_state":
       return handleRestoreState(args);
+    case "avengers_collect_results":
+      return handleCollectResults(args);
     default:
       return {
         content: [{ type: "text", text: `Unknown tool: ${name}` }],
