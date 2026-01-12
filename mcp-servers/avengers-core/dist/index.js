@@ -17,6 +17,10 @@ import { mergeWorktreeTool, handleMergeWorktree } from "./tools/merge-worktree.j
 import { summarizeSessionTool, handleSummarizeSession } from "./tools/summarize-session.js";
 import { saveStateTool, handleSaveState } from "./tools/save-state.js";
 import { restoreStateTool, handleRestoreState } from "./tools/restore-state.js";
+import { collectResultsTool, handleCollectResults } from "./tools/collect-results.js";
+import { analyzeRequestTool, handleAnalyzeRequest } from "./tools/analyze-request.js";
+import { validateCompletionTool, handleValidateCompletion } from "./tools/validate-completion.js";
+import { agentCommunicateTool, broadcastTool, getSharedContextTool, updateSharedContextTool, handleAgentCommunicate, handleBroadcast, handleGetSharedContext, handleUpdateSharedContext } from "./tools/agent-communication.js";
 export const globalState = {
     agents: new Map(),
     tasks: new Map(),
@@ -40,6 +44,12 @@ const server = new Server({
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
+            analyzeRequestTool,
+            validateCompletionTool,
+            agentCommunicateTool,
+            broadcastTool,
+            getSharedContextTool,
+            updateSharedContextTool,
             dispatchAgentTool,
             getAgentStatusTool,
             assignTaskTool,
@@ -47,6 +57,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             summarizeSessionTool,
             saveStateTool,
             restoreStateTool,
+            collectResultsTool,
         ],
     };
 });
@@ -54,6 +65,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
     switch (name) {
+        case "avengers_analyze_request":
+            return handleAnalyzeRequest(args);
+        case "avengers_validate_completion":
+            return handleValidateCompletion(args);
+        case "avengers_agent_communicate":
+            return handleAgentCommunicate(args);
+        case "avengers_broadcast":
+            return handleBroadcast(args);
+        case "avengers_get_shared_context":
+            return handleGetSharedContext(args);
+        case "avengers_update_shared_context":
+            return handleUpdateSharedContext(args);
         case "avengers_dispatch_agent":
             return handleDispatchAgent(args);
         case "avengers_get_agent_status":
@@ -68,6 +91,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             return handleSaveState(args);
         case "avengers_restore_state":
             return handleRestoreState(args);
+        case "avengers_collect_results":
+            return handleCollectResults(args);
         default:
             return {
                 content: [{ type: "text", text: `Unknown tool: ${name}` }],

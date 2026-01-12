@@ -173,10 +173,19 @@ Brief summary of the solution.
 ...
 \`\`\`
 
+### M5: Workflow Selection
+Based on the design complexity, Captain will select workflow:
+\`\`\`typescript
+avengers_analyze_request({
+  request: "[Your implementation request]",
+  forceResearch: false
+})
+\`\`\`
+
 ### Next Steps
 1. Save design document
-2. Create git branch
-3. Begin implementation with TDD
+2. Let Captain analyze and select workflow
+3. Begin implementation (TDD for development tasks)
 
 Call avengers_skill_tdd to start development!
 `

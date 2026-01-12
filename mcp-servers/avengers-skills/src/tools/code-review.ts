@@ -167,12 +167,25 @@ Reason: Out of scope, created task T004
 - [ ] Documentation updated
 - [ ] Ready to merge
 
+### M5: Infinity War Validation Required
+Before approval, validate completion:
+\`\`\`typescript
+avengers_validate_completion({
+  taskId: "T001",
+  testResults: { /* current test results */ },
+  strictness: "moderate"
+})
+\`\`\`
+
+**Important**: Approval blocked if validation fails!
+
 ### Approval Format
 \`\`\`
 ## Code Review Approval
 
 **Reviewer**: [Name]
 **Status**: Approved
+**Validation**: Passed (score: 95/100)
 
 **Summary**:
 - Total findings: X
@@ -189,7 +202,7 @@ Reason: Out of scope, created task T004
 \`\`\`
 
 ### After Approval
-1. Merge changes
+1. Merge changes (avengers_merge_worktree)
 2. Verify in main branch
 3. Close related tasks
 `

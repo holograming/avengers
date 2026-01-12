@@ -23,6 +23,18 @@ import { summarizeSessionTool, handleSummarizeSession } from "./tools/summarize-
 import { saveStateTool, handleSaveState } from "./tools/save-state.js";
 import { restoreStateTool, handleRestoreState } from "./tools/restore-state.js";
 import { collectResultsTool, handleCollectResults } from "./tools/collect-results.js";
+import { analyzeRequestTool, handleAnalyzeRequest } from "./tools/analyze-request.js";
+import { validateCompletionTool, handleValidateCompletion } from "./tools/validate-completion.js";
+import {
+  agentCommunicateTool,
+  broadcastTool,
+  getSharedContextTool,
+  updateSharedContextTool,
+  handleAgentCommunicate,
+  handleBroadcast,
+  handleGetSharedContext,
+  handleUpdateSharedContext
+} from "./tools/agent-communication.js";
 
 // 전역 상태 관리
 export interface AgentState {
@@ -69,6 +81,12 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
+      analyzeRequestTool,
+      validateCompletionTool,
+      agentCommunicateTool,
+      broadcastTool,
+      getSharedContextTool,
+      updateSharedContextTool,
       dispatchAgentTool,
       getAgentStatusTool,
       assignTaskTool,
@@ -86,6 +104,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args = {} } = request.params;
 
   switch (name) {
+    case "avengers_analyze_request":
+      return handleAnalyzeRequest(args);
+    case "avengers_validate_completion":
+      return handleValidateCompletion(args);
+    case "avengers_agent_communicate":
+      return handleAgentCommunicate(args);
+    case "avengers_broadcast":
+      return handleBroadcast(args);
+    case "avengers_get_shared_context":
+      return handleGetSharedContext(args);
+    case "avengers_update_shared_context":
+      return handleUpdateSharedContext(args);
     case "avengers_dispatch_agent":
       return handleDispatchAgent(args);
     case "avengers_get_agent_status":

@@ -30,7 +30,117 @@ Avengers는 Claude Code의 다음 기능들을 활용합니다:
 
 ## MCP Tools API Reference
 
-### avengers-core (8개 도구)
+### avengers-core (14개 도구)
+
+#### M5: avengers_analyze_request
+
+Captain의 요청 분석 도구. 요청 유형을 판단하여 적절한 워크플로우를 선택합니다.
+
+```typescript
+interface AnalyzeRequestParams {
+  request: string;              // 사용자 요청
+  context?: string;             // 추가 컨텍스트
+  forceResearch?: boolean;      // 리서치 강제 여부
+}
+
+// 반환:
+interface RequestAnalysis {
+  type: "research" | "planning" | "development" | "testing" | "documentation" | "review" | "bugfix" | "hybrid";
+  workflow: "research-only" | "planning-only" | "quick-fix" | "documentation-only" | "full-development";
+  requiredAgents: string[];
+  firstStep: string;
+  confidenceScore: number;
+  reasoning: string;
+}
+```
+
+#### M5: avengers_validate_completion
+
+완료 검증 도구. Infinity War 원칙에 따라 검증 통과 전까지 완료 불가.
+
+```typescript
+interface ValidateCompletionParams {
+  taskId: string;
+  testResults?: {
+    unit: { passed: number; failed: number; skipped: number };
+    integration: { passed: number; failed: number; skipped: number };
+    e2e: { passed: number; failed: number; skipped: number };
+    coverage: number;
+  };
+  strictness?: "strict" | "moderate" | "flexible";
+}
+
+// 반환:
+interface ValidationResult {
+  complete: boolean;
+  score: number;
+  blockers: string[];
+  warnings: string[];
+  canMerge: boolean;
+  retryCount: number;
+}
+```
+
+#### M5: avengers_agent_communicate
+
+에이전트 간 메시지 전달 도구.
+
+```typescript
+interface AgentCommunicateParams {
+  from: AgentType;
+  to: AgentType | "all";
+  type: "result" | "request" | "notify" | "handoff";
+  payload: {
+    taskId?: string;
+    content: string;
+    artifacts?: string[];
+    priority?: "critical" | "high" | "medium" | "low";
+  };
+}
+```
+
+#### M5: avengers_broadcast
+
+전체 에이전트에게 알림 전송.
+
+```typescript
+interface BroadcastParams {
+  from: AgentType;
+  type?: "notify" | "result";
+  payload: {
+    content: string;
+    priority?: "critical" | "high" | "medium" | "low";
+  };
+}
+```
+
+#### M5: avengers_get_shared_context
+
+공유 컨텍스트 조회.
+
+```typescript
+interface GetSharedContextParams {
+  taskId: string;
+  filter?: { agents?: AgentType[] };
+}
+```
+
+#### M5: avengers_update_shared_context
+
+공유 컨텍스트 업데이트.
+
+```typescript
+interface UpdateSharedContextParams {
+  taskId: string;
+  agent: AgentType;
+  files?: string[];
+  summary: string;
+}
+```
+
+---
+
+### avengers-core 기존 도구 (8개)
 
 #### avengers_dispatch_agent
 

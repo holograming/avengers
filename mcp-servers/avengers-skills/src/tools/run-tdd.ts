@@ -149,10 +149,23 @@ You have successfully completed a TDD cycle:
 - [ ] No console.logs or debug code
 - [ ] Ready for code review
 
+### M5: Infinity War Validation
+Before declaring completion, run validation:
+\`\`\`typescript
+avengers_validate_completion({
+  taskId: "T001",
+  testResults: { /* your test results */ },
+  strictness: "moderate"
+})
+\`\`\`
+
+**Remember**: 끝날 때까지 끝나지 않습니다.
+
 ### Next Steps
 - Run full test suite
-- Commit your changes
-- Request code review
+- Call avengers_validate_completion
+- If passed: Commit and request code review
+- If failed: Fix blockers and retry
 `
 };
 

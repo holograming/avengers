@@ -5,6 +5,53 @@ Claude Code와 통합되어 복잡한 개발 작업을 자동화합니다.
 
 ---
 
+## M5: 유연한 워크플로우 (핵심 원칙)
+
+**모든 요청이 코딩을 필요로 하지 않습니다.**
+Captain이 요청을 분석하여 필요한 에이전트만 호출합니다.
+
+### 0단계: 요청 분석 (Captain) - 필수
+
+모든 미션 시작 전 반드시 요청 분석 수행:
+
+```typescript
+// 첫 번째 단계로 반드시 호출
+avengers_analyze_request({
+  request: "사용자 요청 내용",
+  forceResearch: true  // 항상 comprehensive 리서치
+})
+```
+
+**분석 결과에 따른 워크플로우 선택:**
+
+| 요청 유형 | 예시 | 호출 에이전트 |
+|----------|------|--------------|
+| Research Only | "Toss Place가 뭐야?" | Jarvis만 |
+| Planning Only | "API 설계해줘" | Jarvis → Dr.Strange |
+| Quick Fix | "버그 고쳐줘" | IronMan/Natasha → Groot |
+| Documentation | "문서 작성해줘" | Jarvis → Vision |
+| Full Development | "서비스 만들어줘" | 전체 팀 |
+
+### 에이전트 계층 (M5 개선)
+
+```
+              ┌─────────────────────┐
+              │      Captain        │  ← Orchestrator
+              └──────────┬──────────┘
+                         │
+    ┌────────────────────┼────────────────────┐
+    │                    │                    │
+┌───▼────┐          ┌────▼────┐          ┌────▼───┐
+│ Jarvis │          │Dr.Strange│          │ Vision │
+│Research│          │ Planning │          │  Docs  │
+└────────┘          └──────────┘          └────────┘
+         Advisory Layer (동등 레벨)
+```
+
+**중요**: Jarvis는 IronMan의 하위가 아닌, Captain의 직속 자문입니다.
+
+---
+
 ## 개발 절차
 
 ### 1단계: 미션 분석 (Captain)
@@ -212,6 +259,12 @@ avengers_dispatch_agent({
 
 | 도구 | 설명 | 주요 파라미터 |
 |------|------|--------------|
+| `avengers_analyze_request` | **M5** Captain 판단 도구 | request, forceResearch, context |
+| `avengers_validate_completion` | **M5** 완료 검증 | taskId, testResults, strictness |
+| `avengers_agent_communicate` | **M5** 에이전트 간 메시지 | from, to, type, payload |
+| `avengers_broadcast` | **M5** 전체 알림 | from, type, payload |
+| `avengers_get_shared_context` | **M5** 공유 컨텍스트 조회 | taskId, filter |
+| `avengers_update_shared_context` | **M5** 공유 컨텍스트 업데이트 | taskId, agent, files, summary |
 | `avengers_dispatch_agent` | 에이전트 호출 (M4 강화) | agent, task, worktree, context, mode, dependencies |
 | `avengers_get_agent_status` | 상태 조회 | agent (optional) |
 | `avengers_assign_task` | 작업 생성 | title, assignee, dependencies |
@@ -257,12 +310,32 @@ avengers_dispatch_agent({
 
 ## 기본 규칙
 
-1. **TDD 필수**: 모든 기능은 테스트 먼저 작성
-2. **Worktree 격리**: 병렬 작업은 반드시 Worktree로 분리
-3. **코드 리뷰 필수**: 병합 전 리뷰 승인 필요
-4. **의존성 관리**: 작업 간 의존성 명시적으로 정의
-5. **상태 확인**: 작업 시작 전 에이전트 상태 확인
-6. **프로젝트 내 상태 저장**: Plan 파일과 세션 정보는 프로젝트의 `.claude/` 디렉토리에 저장
+### M5 핵심 규칙
+1. **Captain 판단 우선**: 모든 미션은 `avengers_analyze_request` 호출로 시작
+2. **유연한 워크플로우**: 요청 유형에 맞는 에이전트만 호출 (Research Only, Quick Fix 등)
+3. **Infinity War 원칙**: 끝날 때까지 끝나지 않음. 검증 통과 전 완료 선언 금지
+
+### 개발 규칙
+4. **TDD 필수**: 모든 기능은 테스트 먼저 작성
+5. **Worktree 격리**: 병렬 작업은 반드시 Worktree로 분리
+6. **코드 리뷰 필수**: 병합 전 리뷰 승인 필요
+7. **의존성 관리**: 작업 간 의존성 명시적으로 정의
+8. **상태 확인**: 작업 시작 전 에이전트 상태 확인
+9. **프로젝트 내 상태 저장**: Plan 파일과 세션 정보는 프로젝트의 `.claude/` 디렉토리에 저장
+
+### 완료 검증 (M5)
+```typescript
+// 모든 개발 작업 완료 전 필수 호출
+avengers_validate_completion({
+  taskId: "T001",
+  testResults: { ... },
+  strictness: "moderate"  // 테스트 통과 필수, 커버리지 권장
+})
+```
+
+- **필수**: 모든 테스트 통과
+- **권장**: 테스트 커버리지 80%+, 문서화
+- **무제한 루프백**: 검증 실패 시 수정 후 재시도
 
 ---
 
