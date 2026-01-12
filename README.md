@@ -1,95 +1,135 @@
-# Avengers - Multi-Agent Development System
+# Avengers
 
-Claude Code 기반 멀티 에이전트 개발 자동화 시스템입니다.
+> 🦾 Claude Code가 팀을 이끌고 복잡한 개발 작업을 자동으로 완성합니다
 
-## Overview
+![Status](https://img.shields.io/badge/status-active-success)
+![Phase](https://img.shields.io/badge/M1~M5-complete-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-7명의 전문 AI 에이전트가 협력하여 복잡한 개발 작업을 자동화합니다.
+---
 
-```
-              ┌─────────────────────┐
-              │      Captain        │  ← Orchestrator & Coordinator
-              │  요청 분석 + 조율    │
-              └──────────┬──────────┘
-                         │
-    ┌────────────────────┼────────────────────┐
-    │                    │                    │
-┌───▼────┐          ┌────▼────┐          ┌────▼───┐
-│ Jarvis │          │Dr.Strange│          │ Vision │
-│Research│          │ Planning │          │  Docs  │
-└────────┘          └──────────┘          └────────┘
-         Advisory Layer (동등 레벨)
-                         │
-    ┌────────────────────┼────────────────────┐
-    │                    │                    │
-┌───▼────┐          ┌────▼────┐          ┌────▼───┐
-│IronMan │          │ Natasha │          │ Groot  │
-│Fullstk │          │ Backend │          │  Test  │
-└────────┘          └──────────┘          └────────┘
-         Execution Layer
-```
+## 🎯 Why Avengers?
 
-**M5 유연한 계층**: Captain이 요청을 분석하여 필요한 에이전트만 호출합니다.
+**"끝날 때까지 끝나지 않습니다"** — Infinity War 원칙
 
-## Features
+일반적인 AI 코딩 도구는 단일 작업만 수행합니다.
+**Avengers는 7명의 전문 에이전트가 협업하여 전체 개발 사이클을 자동으로 완성합니다.**
 
-- **유연한 워크플로우**: Research Only, Planning, Quick Fix, Full Development
-- **병렬 에이전트 실행**: Background Task 기반 컨텍스트 격리
-- **완료 검증 (Infinity War)**: 테스트 통과 전까지 완료 불가
-- **에이전트 간 소통**: Handoff, Broadcast, Shared Context
-- **상태 저장/복구**: 세션 중단 후 재개 지원
+### 차별화 포인트
 
-## Quick Start
+| 기능 | 일반 AI 도구 | Avengers |
+|------|-------------|---------|
+| 작업 분석 | 수동 | ✅ 자동 (Captain) |
+| 워크플로우 | 고정 | ✅ 유연 (M5) |
+| 병렬 작업 | 불가 | ✅ Worktree 기반 |
+| 복구 | 없음 | ✅ Infinity War |
+| 정책 운영 | 없음 | ✅ 4개 정책 |
+
+---
+
+## ⚡ Quick Start
 
 ```bash
-# 1. 프로젝트 클론
-git clone <repository-url>
-cd Avengers
+# 1. 프로젝트에 Avengers 추가
+npm install @avengers/core
 
-# 2. MCP 서버 설치
-cd mcp-servers/avengers-core && npm install && npm run build
-cd ../avengers-skills && npm install && npm run build
+# 2. 미션 시작
+/mission "로그인 기능 구현"
 
-# 3. Claude Code에서 사용
-claude> /assemble              # 팀 소집
-claude> /mission 인증 시스템 구현  # 미션 시작
-claude> /debrief               # 결과 확인
+# 3. 결과 확인
+/debrief
 ```
 
-자세한 설치 방법은 [Installation Guide](docs/INSTALLATION.md) 참조.
+**2시간 만에 완성** (순차 작업 시 5시간 소요)
 
-## Agents
+[상세 설치 가이드 →](docs/INSTALLATION.md)
 
-| 에이전트 | 역할 | 전문 분야 |
-|---------|------|----------|
-| **Captain** | Orchestrator | 요청 분석, 에이전트 조율 |
-| **IronMan** | Fullstack Dev | React, Node.js, TypeScript |
-| **Natasha** | Backend Dev | API, Database, 서버 로직 |
-| **Groot** | Test Specialist | 테스트 작성, 품질 검증 |
-| **Jarvis** | Researcher | 기술 조사, 문서 검색 |
-| **Dr.Strange** | Architect | 요구사항 분석, 시스템 설계 |
-| **Vision** | Documentation | 문서 작성, API 명세 |
+---
 
-자세한 에이전트 정보는 [Agents Guide](docs/AGENTS.md) 참조.
+## 🦸 Meet the Team
 
-## Documentation
+```
+       Captain (오케스트레이터)
+            ↓
+    ┌───────┼───────┐
+ Jarvis  Dr.Strange  Vision
+(리서치)  (기획)    (문서)
+    └───────┼───────┘
+    ┌───────┼───────┐
+ IronMan  Natasha  Groot
+(풀스택)  (백엔드) (테스트)
+```
+
+각 에이전트는 전문 분야에서 자율적으로 작업합니다.
+
+[에이전트 상세 →](docs/AGENTS.md)
+
+---
+
+## 🚀 Features
+
+### M5: Flexible Workflow
+
+**왜 필요한가?**
+모든 요청이 전체 개발 사이클을 필요로 하지 않습니다.
+M5는 요청 유형을 자동 분석하여 필요한 에이전트만 호출합니다.
+
+- 🔍 **Research Only**: Jarvis만 (10분)
+- 📋 **Planning Only**: Jarvis → Dr.Strange (30분)
+- 🐛 **Quick Fix**: IronMan/Natasha → Groot (90분)
+- 🎨 **Full Development**: 전체 팀 (2-4시간)
+
+[워크플로우 가이드 →](docs/WORKFLOWS.md)
+
+### Infinity War Principle
+
+작업이 중단되어도 **100% 복구** 가능합니다.
+
+- 자동 상태 저장 (10분마다)
+- 4계층 복구 메커니즘
+- 데이터 손실 < 10분
+
+[복구 정책 →](.claude/policies/recovery-policy.md)
+
+### Policy-Driven Operation
+
+모든 협업 규칙이 명확히 문서화되어 있습니다.
+
+- [Shared Context](.claude/policies/shared-context-policy.md) — 정보 공유
+- [Task](.claude/policies/task-policy.md) — 작업 관리
+- [Logging](.claude/policies/logging-policy.md) — 이벤트 기록
+- [Recovery](.claude/policies/recovery-policy.md) — 상태 복구
+
+[정책 개요 →](.claude/policies/README.md)
+
+---
+
+## 📚 Documentation
 
 | 문서 | 설명 |
 |------|------|
-| [Installation](docs/INSTALLATION.md) | 설치 가이드 |
-| [Workflows](docs/WORKFLOWS.md) | M5 워크플로우 상세 |
-| [Agents](docs/AGENTS.md) | 에이전트 상세 |
-| [Features](docs/FEATURES.md) | 기능 및 API 레퍼런스 |
-| [Architecture](docs/ARCHITECTURE.md) | 시스템 아키텍처 |
-| [Examples](docs/EXAMPLES.md) | 사용 예시 |
-| [CLAUDE.md](CLAUDE.md) | Claude Code 통합 가이드 |
+| [INSTALLATION.md](docs/INSTALLATION.md) | 설치 및 설정 |
+| [WORKFLOWS.md](docs/WORKFLOWS.md) | M5 워크플로우 상세 |
+| [AGENTS.md](docs/AGENTS.md) | 에이전트 역할 |
+| [FEATURES.md](docs/FEATURES.md) | 기능 레퍼런스 |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 시스템 아키텍처 |
+| [EXAMPLES.md](docs/EXAMPLES.md) | 사용 예시 |
+| [CLAUDE.md](CLAUDE.md) | Claude Code 통합 |
 
-## Roadmap
+---
 
-- [x] **Phase 1** - 핵심 시스템 (M1-M5) 완료
-- [ ] **Phase 2** - 외부 연동 (OpenCode 등)
-- [ ] **Phase 3** - 확장 기능
+## 📊 Project Status
 
-## License
+- ✅ **Phase 1**: M1-M5 Core System
+- 🔄 **Phase 2**: External Integration
+- ⏳ **Phase 3**: Advanced Features
 
-MIT License
+---
+
+## 🤝 Contributing
+
+Contributions welcome! [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## 📄 License
+
+MIT — [LICENSE](LICENSE)
