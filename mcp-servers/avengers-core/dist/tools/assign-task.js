@@ -31,13 +31,23 @@ export const assignTaskTool = {
                 type: "array",
                 items: { type: "string" },
                 description: "Task IDs that must complete before this one"
+            },
+            acceptanceCriteria: {
+                type: "array",
+                items: { type: "string" },
+                description: "Acceptance criteria for task completion"
+            },
+            completionLevel: {
+                type: "string",
+                enum: ["code_only", "with_tests", "with_execution", "with_docs"],
+                description: "Completion level specification (default: with_tests)"
             }
         },
         required: ["title"]
     }
 };
 export async function handleAssignTask(args) {
-    const { title, description, assignee, priority, dependencies } = args;
+    const { title, description, assignee, priority, dependencies, acceptanceCriteria, completionLevel } = args;
     // 담당자 유효성 검사
     if (assignee && !globalState.agents.has(assignee)) {
         return {
@@ -96,7 +106,9 @@ export async function handleAssignTask(args) {
                         assignee: assignee || "(unassigned)",
                         priority: priority || "medium",
                         status: task.status,
-                        dependencies: dependencies || []
+                        dependencies: dependencies || [],
+                        acceptanceCriteria: acceptanceCriteria || [],
+                        completionLevel: completionLevel || "with_tests"
                     }
                 }, null, 2)
             }],

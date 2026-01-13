@@ -167,7 +167,7 @@ Reason: Out of scope, created task T004
 - [ ] Documentation updated
 - [ ] Ready to merge
 
-### M5: Infinity War Validation Required
+### Infinity War Validation Required
 Before approval, validate completion:
 \`\`\`typescript
 avengers_validate_completion({

@@ -5,7 +5,7 @@ Claude Code와 통합되어 복잡한 개발 작업을 자동화합니다.
 
 ---
 
-## M5: 유연한 워크플로우 (핵심 원칙)
+## 유연한 워크플로우 (핵심 원칙)
 
 **모든 요청이 코딩을 필요로 하지 않습니다.**
 Captain이 요청을 분석하여 필요한 에이전트만 호출합니다.
@@ -32,7 +32,7 @@ avengers_analyze_request({
 | Documentation | "문서 작성해줘" | Jarvis → Vision |
 | Full Development | "서비스 만들어줘" | 전체 팀 |
 
-### 에이전트 계층 (M5 개선)
+### 에이전트 계층
 
 ```
               ┌─────────────────────┐
@@ -49,6 +49,36 @@ avengers_analyze_request({
 ```
 
 **중요**: Jarvis는 IronMan의 하위가 아닌, Captain의 직속 자문입니다.
+
+---
+
+## 완료 기준 선택
+
+모든 미션 시작 시 Captain이 완료 기준을 분석하고 제시합니다. 사용자의 요청 성격에 따라 적절한 완료 수준을 결정합니다:
+
+| 완료 기준 | 포함 내용 | 사용 시나리오 |
+|----------|----------|-------------|
+| **code_only** | 코드 작성 + 타입 체크 | 프로토타입, 빠른 실험, 컴파일 언어 |
+| **with_tests** (기본) | 코드 + 단위/통합 테스트 | 일반적인 개발 작업 |
+| **with_execution** | 코드 + 테스트 + 실행 확인 | 중요 기능, 사용자 대면 기능 |
+| **with_docs** | 코드 + 테스트 + 실행 + 문서 | API 공개, 팀 공유 라이브러리 |
+
+### 명시적 지정
+
+완료 기준을 명시적으로 지정할 수 있습니다:
+
+```typescript
+avengers_analyze_request({
+  request: "사용자 인증 API 구현",
+  completionLevel: "with_execution"  // 실행 확인까지 필요
+})
+```
+
+### 자동 판단
+
+파라미터를 생략하면 Captain이 요청 유형에 따라 적절한 기본값을 선택합니다:
+- 기본값: `with_tests` (모든 코드 기능은 테스트 포함)
+- Research, Planning, Documentation 유형은 완료 기준 미적용
 
 ---
 
@@ -259,20 +289,20 @@ avengers_dispatch_agent({
 
 | 도구 | 설명 | 주요 파라미터 |
 |------|------|--------------|
-| `avengers_analyze_request` | **M5** Captain 판단 도구 | request, forceResearch, context |
-| `avengers_validate_completion` | **M5** 완료 검증 | taskId, testResults, strictness |
-| `avengers_agent_communicate` | **M5** 에이전트 간 메시지 | from, to, type, payload |
-| `avengers_broadcast` | **M5** 전체 알림 | from, type, payload |
-| `avengers_get_shared_context` | **M5** 공유 컨텍스트 조회 | taskId, filter |
-| `avengers_update_shared_context` | **M5** 공유 컨텍스트 업데이트 | taskId, agent, files, summary |
-| `avengers_dispatch_agent` | 에이전트 호출 (M4 강화) | agent, task, worktree, context, mode, dependencies |
+| `avengers_analyze_request` | Captain 판단 도구 | request, forceResearch, context, completionLevel |
+| `avengers_validate_completion` | 완료 검증 | taskId, testResults, strictness |
+| `avengers_agent_communicate` | 에이전트 간 메시지 | from, to, type, payload |
+| `avengers_broadcast` | 전체 알림 | from, type, payload |
+| `avengers_get_shared_context` | 공유 컨텍스트 조회 | taskId, filter |
+| `avengers_update_shared_context` | 공유 컨텍스트 업데이트 | taskId, agent, files, summary |
+| `avengers_dispatch_agent` | 에이전트 호출 | agent, task, worktree, context, mode, dependencies |
 | `avengers_get_agent_status` | 상태 조회 | agent (optional) |
 | `avengers_assign_task` | 작업 생성 | title, assignee, dependencies |
 | `avengers_merge_worktree` | Worktree 병합 | worktreePath, targetBranch, createPR |
-| `avengers_collect_results` | 백그라운드 결과 수집 (M4) | taskIds, timeout, format |
-| `avengers_save_state` | 세션 상태 저장 (M3) | key, includeAgents, includeTasks |
-| `avengers_restore_state` | 세션 상태 복구 (M3) | key |
-| `avengers_summarize_session` | 세션 요약 생성 (M3) | format, includeMetrics |
+| `avengers_collect_results` | 백그라운드 결과 수집 | taskIds, timeout, format |
+| `avengers_save_state` | 세션 상태 저장 | key, includeAgents, includeTasks |
+| `avengers_restore_state` | 세션 상태 복구 | key |
+| `avengers_summarize_session` | 세션 요약 생성 | format, includeMetrics |
 
 ### avengers-skills
 
@@ -310,7 +340,7 @@ avengers_dispatch_agent({
 
 ## 기본 규칙
 
-### M5 핵심 규칙
+### 핵심 규칙
 1. **Captain 판단 우선**: 모든 미션은 `avengers_analyze_request` 호출로 시작
 2. **유연한 워크플로우**: 요청 유형에 맞는 에이전트만 호출 (Research Only, Quick Fix 등)
 3. **Infinity War 원칙**: 끝날 때까지 끝나지 않음. 검증 통과 전 완료 선언 금지
@@ -323,7 +353,7 @@ avengers_dispatch_agent({
 8. **상태 확인**: 작업 시작 전 에이전트 상태 확인
 9. **프로젝트 내 상태 저장**: Plan 파일과 세션 정보는 프로젝트의 `.claude/` 디렉토리에 저장
 
-### 완료 검증 (M5)
+### 완료 검증
 ```typescript
 // 모든 개발 작업 완료 전 필수 호출
 avengers_validate_completion({
@@ -395,7 +425,7 @@ avengers_validate_completion({
 
 ---
 
-## 병렬 에이전트 패턴 (M4)
+## 병렬 에이전트 패턴
 
 ### Background Task 기반 병렬 실행
 
@@ -435,7 +465,7 @@ avengers_collect_results({
 
 ---
 
-## 효율성 패턴 (M3)
+## 효율성 패턴
 
 ### 상태 저장/복구
 
@@ -468,8 +498,8 @@ avengers_summarize_session({
 - `skills/tdd/SKILL.md` - TDD 상세 가이드
 - `skills/brainstorming/SKILL.md` - 브레인스토밍 가이드
 - `skills/code-review/SKILL.md` - 코드 리뷰 가이드
-- `skills/parallel-agents/SKILL.md` - 병렬 에이전트 패턴 (M4)
-- `skills/efficiency/SKILL.md` - 효율성 가이드 (M3)
-- `skills/evaluation/SKILL.md` - 평가 프레임워크 (M1)
+- `skills/parallel-agents/SKILL.md` - 병렬 에이전트 패턴
+- `skills/efficiency/SKILL.md` - 효율성 가이드
+- `skills/evaluation/SKILL.md` - 평가 프레임워크
 - `reference/docs/*.md` - Claude Code 공식 문서
 - `docs/FEATURES.md` - 기능 상세 문서

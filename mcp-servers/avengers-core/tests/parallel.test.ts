@@ -2,7 +2,7 @@
  * Parallel Agent System Integration Tests
  *
  * Tests for dispatch-agent, collect-results, and agent-templates.
- * Based on M4 design: .claude/designs/m4-parallel-patterns.md
+ * Based on parallel agent patterns: .claude/designs/parallel-patterns.md
  */
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -1071,7 +1071,7 @@ async function testAgentTemplates(client: Client): Promise<void> {
 async function main() {
   console.log("\n" + "=".repeat(60));
   console.log("    PARALLEL AGENT SYSTEM INTEGRATION TESTS");
-  console.log("    M4: Background Task Integration");
+  console.log("    Background Task Integration");
   console.log("=".repeat(60) + "\n");
 
   let client: Client | null = null;

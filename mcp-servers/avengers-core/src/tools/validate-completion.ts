@@ -4,7 +4,7 @@
  * 태스크 완료 검증 도구입니다.
  * Infinity War 원칙: "끝날 때까지 끝나지 않는다"
  *
- * M5: 완료 검증 강제화
+ * 완료 검증 강제화
  * - 모든 테스트 통과 필수
  * - 커버리지/문서화는 권장
  * - 검증 실패 시 완료 불가
@@ -219,7 +219,7 @@ function validateTests(
     }
   }
 
-  // Coverage check (M5 설정: moderate = 권장만)
+  // Coverage check ((설정: moderate = 권장만)
   if (strictness === "strict" && testResults.coverage < 80) {
     blockers.push(`테스트 커버리지 ${testResults.coverage}% (최소 80% 필요)`);
   } else if (testResults.coverage < 80) {

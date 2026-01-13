@@ -202,7 +202,7 @@ avengers_summarize_session({
 })
 ```
 
-## M5 Workflow Examples
+## Workflow Examples
 
 ### 요청 분석
 

@@ -181,7 +181,7 @@ Brief summary of the solution.
 ...
 \`\`\`
 
-### M5: Workflow Selection
+### Workflow Selection
 Based on the design complexity, Captain will select workflow:
 \`\`\`typescript
 avengers_analyze_request({

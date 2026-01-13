@@ -1,14 +1,13 @@
 # Resume 정보
 
-**최종 업데이트:** 2026-01-11
+**최종 업데이트:** 2026-01-13
 
 ---
 
 ## 마지막 커밋
 
-- **Hash:** `6fabe11`
-- **Message:** feat(parallel): Implement Milestone 4 - Background Task Parallel Agent System
-- **Branch:** test/m4-parallel-agents
+- **Latest:** Problem resolution - Document cleanup and completion criteria system
+- **Status:** Policies, designs, and plans cleaned up; MCP-based implementation complete
 
 ---
 
@@ -16,31 +15,31 @@
 
 | Milestone | 상태 | 커밋 | 설명 |
 |-----------|------|------|------|
-| **M1: 평가 시스템** | Completed | `f89904c` | 07 문서 기반 평가 프레임워크 |
-| **M2: 특수 스킬** | Completed | `59a4306` | Frontend, Backend, Debugging, CI/CD |
-| **M3: 효율성 시스템** | Completed | `bc0d7de` | 토큰 절약, 상태 저장/복구, 세션 요약 |
-| **M4: 병렬 에이전트** | Completed | `6fabe11` | Background Task 기반 병렬 패턴 |
-| M5: 외부 연동 | Pending | - | OpenCode 연동 |
+| **평가 시스템** | Completed | `f89904c` | 07 문서 기반 평가 프레임워크 |
+| **특수 스킬** | Completed | `59a4306` | Frontend, Backend, Debugging, CI/CD |
+| **효율성 시스템** | Completed | `bc0d7de` | 토큰 절약, 상태 저장/복구, 세션 요약 |
+| **병렬 에이전트** | Completed | `6fabe11` | Background Task 기반 병렬 패턴 |
+| 외부 연동 | Pending | - | OpenCode 연동 |
 
 ---
 
-## M4 완료 산출물
+## 완료된 개선사항
 
-```
-.claude/designs/
-└── m4-parallel-patterns.md      # 아키텍처 설계 (1047줄)
+### 1. 완료 기준 시스템 구현
+- **파일**: `mcp-servers/avengers-core/src/tools/analyze-request.ts`
+- **기능**: 4단계 완료 기준 (code_only, with_tests, with_execution, with_docs)
+- **자동 생성**: suggestedCriteria 필드 추가
 
-skills/parallel-agents/
-└── SKILL.md                     # Background Task 가이드 (564줄)
+### 2. M4, M5 표현 제거
+- **26개 파일** 일괄 수정
+- **버전 마커 제거**: M1, M3, M4, M5 모두 제거
+- **의미 보존**: 기능 이름으로 대체 (예: "유연한 워크플로우", "병렬 에이전트 패턴")
 
-mcp-servers/avengers-core/src/
-├── agent-templates.ts           # 7개 에이전트 프롬프트 템플릿
-├── tools/dispatch-agent.ts      # (개선) context, mode, dependencies 지원
-└── tools/collect-results.ts     # (신규) 결과 집계 및 충돌 감지
-
-mcp-servers/avengers-core/tests/
-└── parallel.test.ts             # 31개 통합 테스트
-```
+### 3. 문서 정리
+- ✅ **삭제**: `.claude/policies/` (5개 파일)
+- ✅ **삭제**: `.claude/designs/m4-parallel-patterns.md`
+- ✅ **삭제**: `.claude/plans/sleepy-conjuring-charm.md`
+- ✅ **업데이트**: README.md, CLAUDE.md, docs/*.md, MCP 도구 주석
 
 ### MCP 도구
 
@@ -52,42 +51,35 @@ mcp-servers/avengers-core/tests/
 
 ---
 
-## Phase 1 문서화 완료
+## 주요 개선사항 요약
 
-| 문서 | 설명 |
-|------|------|
-| `README.md` | 프로젝트 개요, 설치법, 아키텍처 다이어그램 |
-| `CLAUDE.md` | M3/M4 도구 추가, 병렬 패턴 섹션 |
-| `docs/FEATURES.md` | MCP API 레퍼런스, 상세 기능 문서 |
+- **완료 기준 명확화**: 4단계 시스템으로 사용자 기대치 일치 (analyze-request 통합)
+- **문서 간결화**: M1-M5 버전 마커 제거, 기능 중심 구조로 전환
+- **정책 구현화**: 정책 문서는 MCP 도구로 구현됨 (.claude/policies/ 삭제)
+- **계획 문서 정리**: 슬리피한 계획 파일 제거, 프로젝트 루트 정리
 
----
-
-## 다음 작업 (Milestone 5)
-
-외부 연동 - OpenCode 통합:
-
-| 산출물 | 설명 |
-|--------|------|
-| `integrations/opencode/adapter.ts` | OpenCode 어댑터 |
-| `integrations/README.md` | 연동 가이드 |
-
----
-
-## 주요 Plan 파일
-
-- `.claude/plans/sleepy-conjuring-charm.md` - 전체 로드맵
-
----
-
-## Resume 명령어
-
-다음 세션에서 사용:
+## 아키텍처 구조 (최종)
 
 ```
-Milestone 1, 2, 3, 4 완료됨 (commits f89904c, 59a4306, bc0d7de, 6fabe11).
-Plan: .claude/plans/sleepy-conjuring-charm.md
+mcp-servers/avengers-core/
+├── src/tools/
+│   ├── analyze-request.ts      ✅ 완료 기준 시스템 추가
+│   ├── assign-task.ts          ✅ acceptanceCriteria 지원
+│   └── ... (14개 도구)
+└── dist/                        ✅ 빌드 완료
 
-Milestone 5 시작 - 외부 연동:
-- OpenCode 통합
-- 어댑터 패턴 구현
+.claude/
+├── commands/                   ✅ 슬래시 커맨드
+├── resume/latest.md            ✅ 세션 정보 (현재 파일)
+└── plans/                       ✅ 활성 계획만 유지
+
+docs/
+├── CLAUDE.md                   ✅ M4/M5 제거, 완료 기준 추가
+├── README.md                   ✅ 정책 링크 → MCP 도구로 변경
+└── ... (6개 사용자 가이드)
 ```
+
+## 다음 작업 (선택사항)
+
+- **OpenCode 통합**: 외부 연동 기능 (Milestone 5)
+- **MCP 리소스 추가**: 문서-코드 동기화 (향후 작업)

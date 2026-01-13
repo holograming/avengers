@@ -34,6 +34,16 @@ export const assignTaskTool: Tool = {
         type: "array",
         items: { type: "string" },
         description: "Task IDs that must complete before this one"
+      },
+      acceptanceCriteria: {
+        type: "array",
+        items: { type: "string" },
+        description: "Acceptance criteria for task completion"
+      },
+      completionLevel: {
+        type: "string",
+        enum: ["code_only", "with_tests", "with_execution", "with_docs"],
+        description: "Completion level specification (default: with_tests)"
       }
     },
     required: ["title"]
@@ -41,12 +51,14 @@ export const assignTaskTool: Tool = {
 };
 
 export async function handleAssignTask(args: Record<string, unknown>) {
-  const { title, description, assignee, priority, dependencies } = args as {
+  const { title, description, assignee, priority, dependencies, acceptanceCriteria, completionLevel } = args as {
     title: string;
     description?: string;
     assignee?: string;
     priority?: string;
     dependencies?: string[];
+    acceptanceCriteria?: string[];
+    completionLevel?: string;
   };
 
   // 담당자 유효성 검사
@@ -115,7 +127,9 @@ export async function handleAssignTask(args: Record<string, unknown>) {
           assignee: assignee || "(unassigned)",
           priority: priority || "medium",
           status: task.status,
-          dependencies: dependencies || []
+          dependencies: dependencies || [],
+          acceptanceCriteria: acceptanceCriteria || [],
+          completionLevel: completionLevel || "with_tests"
         }
       }, null, 2)
     }],

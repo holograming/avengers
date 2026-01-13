@@ -6,10 +6,10 @@
 
 1. [Overview](#overview)
 2. [MCP Tools API Reference](#mcp-tools-api-reference)
-3. [Parallel Agent System (M4)](#parallel-agent-system-m4)
-4. [Efficiency System (M3)](#efficiency-system-m3)
-5. [Evaluation Framework (M1)](#evaluation-framework-m1)
-6. [Specialized Skills (M2)](#specialized-skills-m2)
+3. [Parallel Agent System](#parallel-agent-system-m4)
+4. [Efficiency System](#efficiency-system-m3)
+5. [Evaluation Framework](#evaluation-framework-m1)
+6. [Specialized Skills](#specialized-skills-m2)
 7. [Agent Templates](#agent-templates)
 
 ---
@@ -32,7 +32,7 @@ Avengers는 Claude Code의 다음 기능들을 활용합니다:
 
 ### avengers-core (14개 도구)
 
-#### M5: avengers_analyze_request
+#### avengers_analyze_request
 
 Captain의 요청 분석 도구. 요청 유형을 판단하여 적절한 워크플로우를 선택합니다.
 
@@ -54,7 +54,7 @@ interface RequestAnalysis {
 }
 ```
 
-#### M5: avengers_validate_completion
+#### avengers_validate_completion
 
 완료 검증 도구. Infinity War 원칙에 따라 검증 통과 전까지 완료 불가.
 
@@ -81,7 +81,7 @@ interface ValidationResult {
 }
 ```
 
-#### M5: avengers_agent_communicate
+#### avengers_agent_communicate
 
 에이전트 간 메시지 전달 도구.
 
@@ -99,7 +99,7 @@ interface AgentCommunicateParams {
 }
 ```
 
-#### M5: avengers_broadcast
+#### avengers_broadcast
 
 전체 에이전트에게 알림 전송.
 
@@ -114,7 +114,7 @@ interface BroadcastParams {
 }
 ```
 
-#### M5: avengers_get_shared_context
+#### avengers_get_shared_context
 
 공유 컨텍스트 조회.
 
@@ -125,7 +125,7 @@ interface GetSharedContextParams {
 }
 ```
 
-#### M5: avengers_update_shared_context
+#### avengers_update_shared_context
 
 공유 컨텍스트 업데이트.
 
@@ -151,7 +151,7 @@ interface DispatchAgentParams {
   agent: "captain" | "ironman" | "natasha" | "groot" | "jarvis" | "dr-strange" | "vision";
   task: string;
 
-  // 명시적 컨텍스트 (M4 신규)
+  // 명시적 컨텍스트 (신규)
   context?: {
     files?: string[];           // 참조할 파일 경로
     snippets?: CodeSnippet[];   // 특정 코드 섹션
@@ -161,14 +161,14 @@ interface DispatchAgentParams {
   worktree?: boolean;           // 독립 브랜치 생성 (default: false)
   priority?: "critical" | "high" | "medium" | "low";
 
-  // 실행 모드 (M4 신규)
+  // 실행 모드 (신규)
   mode?: "background" | "foreground";  // default: background
   outputFormat?: "summary" | "json" | "full";
 
-  // 의존성 (M4 신규)
+  // 의존성 (신규)
   dependencies?: string[];      // 선행 완료 필요 Task ID
 
-  // 품질 기준 (M4 신규)
+  // 품질 기준 (신규)
   acceptanceCriteria?: string[];
   constraints?: string[];
 }
@@ -265,7 +265,7 @@ interface MergeWorktreeParams {
 }
 ```
 
-#### avengers_save_state (M3)
+#### avengers_save_state
 
 현재 세션 상태를 저장합니다.
 
@@ -278,7 +278,7 @@ interface SaveStateParams {
 }
 ```
 
-#### avengers_restore_state (M3)
+#### avengers_restore_state
 
 저장된 세션 상태를 복구합니다.
 
@@ -288,7 +288,7 @@ interface RestoreStateParams {
 }
 ```
 
-#### avengers_summarize_session (M3)
+#### avengers_summarize_session
 
 현재 세션의 요약을 생성합니다.
 
@@ -342,7 +342,7 @@ interface CodeReviewParams {
 
 ---
 
-## Parallel Agent System (M4)
+## Parallel Agent System
 
 ### 핵심 개념
 
@@ -437,7 +437,7 @@ avengers_dispatch_agent({
 
 ---
 
-## Efficiency System (M3)
+## Efficiency System
 
 ### 상태 관리
 
@@ -479,7 +479,7 @@ const summary = avengers_summarize_session({
 
 ---
 
-## Evaluation Framework (M1)
+## Evaluation Framework
 
 ### 평가 구조
 
@@ -511,7 +511,7 @@ tests/evals/
 
 ---
 
-## Specialized Skills (M2)
+## Specialized Skills
 
 ### Frontend (IronMan)
 
@@ -627,8 +627,8 @@ npm test
 
 ```
 mcp-servers/avengers-core/tests/
-├── efficiency.test.ts      # M3: 상태 관리 테스트 (8개)
-└── parallel.test.ts        # M4: 병렬 에이전트 테스트 (31개)
+├── efficiency.test.ts      # 상태 관리 테스트 (8개)
+└── parallel.test.ts        # 병렬 에이전트 테스트 (31개)
     ├── dispatch-agent      # 11개
     ├── collect-results     # 10개
     └── agent-templates     # 10개
@@ -641,4 +641,4 @@ mcp-servers/avengers-core/tests/
 - [README.md](../README.md) - 프로젝트 개요
 - [CLAUDE.md](../CLAUDE.md) - Claude Code 통합 가이드
 - [skills/parallel-agents/SKILL.md](../skills/parallel-agents/SKILL.md) - 병렬 에이전트 상세 가이드
-- [.claude/designs/m4-parallel-patterns.md](../.claude/designs/m4-parallel-patterns.md) - M4 아키텍처 설계
+- [.claude/designs/parallel-patterns.md](../.claude/designs/parallel-patterns.md) - 아키텍처 설계

@@ -149,7 +149,7 @@ You have successfully completed a TDD cycle:
 - [ ] No console.logs or debug code
 - [ ] Ready for code review
 
-### M5: Infinity War Validation
+### Infinity War Validation
 Before declaring completion, run validation:
 \`\`\`typescript
 avengers_validate_completion({

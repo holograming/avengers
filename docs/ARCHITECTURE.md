@@ -90,10 +90,10 @@ Avengers/
 │       └── package.json
 │
 ├── skills/
-│   ├── evaluation/         # 평가 프레임워크 (M1)
+│   ├── evaluation/         # 평가 프레임워크
 │   │   └── SKILL.md
 │   │
-│   ├── specialized/        # 전문 스킬 (M2)
+│   ├── specialized/        # 전문 스킬
 │   │   ├── frontend/
 │   │   │   └── SKILL.md
 │   │   ├── backend/
@@ -103,10 +103,10 @@ Avengers/
 │   │   └── cicd/
 │   │       └── SKILL.md
 │   │
-│   ├── efficiency/         # 효율성 스킬 (M3)
+│   ├── efficiency/         # 효율성 스킬
 │   │   └── SKILL.md
 │   │
-│   └── parallel-agents/    # 병렬 에이전트 패턴 (M4)
+│   └── parallel-agents/    # 병렬 에이전트 패턴
 │       └── SKILL.md
 │
 ├── tests/

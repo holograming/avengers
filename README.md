@@ -3,7 +3,7 @@
 > 🦾 AI-Avengers 팀이 복잡한 개발 작업을 자동으로 끝까지 완성합니다
 
 ![Status](https://img.shields.io/badge/status-active-success)
-![Phase](https://img.shields.io/badge/M1~M5-complete-blue)
+![Phase](https://img.shields.io/badge/~-complete-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -124,17 +124,13 @@ avengers_dispatch_agent({
 
 **"There was an idea... to bring together a group of remarkable people."** — Nick Fury, *The Avengers*
 
-모든 협업 규칙이 정책 문서로 문서화되어 있습니다.
+모든 협업 규칙이 MCP 도구로 구현되어 있습니다:
+- **Shared Context**: `avengers_get_shared_context()`, `avengers_update_shared_context()`
+- **Task Management**: `avengers_assign_task()`, `avengers_dispatch_agent()`
+- **Logging & Monitoring**: `avengers_get_agent_status()`, `avengers_broadcast()`
+- **Recovery**: `avengers_save_state()`, `avengers_restore_state()`
 
-**정책 가이드라인** (개발 권장사항):
-- [Shared Context](.claude/policies/shared-context-policy.md) — 에이전트 간 정보 공유
-- [Task](.claude/policies/task-policy.md) — 작업 생성 및 관리
-- [Logging](.claude/policies/logging-policy.md) — 이벤트 로깅
-- [Recovery](.claude/policies/recovery-policy.md) — 상태 복구 전략
-
-⚠️ **주의**: 정책 문서는 권장 가이드라인이며, 코드로 강제되지 않습니다. 실행은 각 에이전트의 구현에 따릅니다.
-
-[정책 개요 →](.claude/policies/README.md)
+자세한 내용은 [CLAUDE.md](CLAUDE.md)의 MCP 도구 레퍼런스 섹션을 참고하세요.
 
 ---
 
@@ -159,10 +155,10 @@ avengers_dispatch_agent({
 | 기능 | 일반 AI 도구 | Avengers |
 |------|-------------|---------|
 | 작업 분석 | 수동 | ✅ 자동 (Captain) |
-| 워크플로우 | 고정 | ✅ 유연 (M5) |
+| 워크플로우 | 고정 | ✅ 유연함 |
 | 병렬 작업 | 불가 | ✅ Worktree 기반 |
 | 복구 | 없음 | ✅ Infinity War |
-| 정책 운영 | 없음 | ✅ 4개 정책 |
+| 협업 규칙 | 없음 | ✅ MCP 도구 기반 |
 
 ---
 
@@ -210,7 +206,7 @@ npm install @avengers/core
 | 문서 | 설명 |
 |------|------|
 | [INSTALLATION.md](docs/INSTALLATION.md) | 설치 및 설정 |
-| [WORKFLOWS.md](docs/WORKFLOWS.md) | M5 워크플로우 상세 |
+| [WORKFLOWS.md](docs/WORKFLOWS.md) |  워크플로우 상세 |
 | [AGENTS.md](docs/AGENTS.md) | 에이전트 역할 |
 | [FEATURES.md](docs/FEATURES.md) | 기능 레퍼런스 |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 시스템 아키텍처 |
@@ -221,7 +217,7 @@ npm install @avengers/core
 
 ## 📊 Project Status
 
-- ✅ **Phase 1**: M1-M5 Core System
+- ✅ **Phase 1**: - Core System
 - 🔄 **Phase 2**: External Integration
 - ⏳ **Phase 3**: Advanced Features
 

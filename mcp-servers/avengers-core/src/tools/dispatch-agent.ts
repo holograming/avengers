@@ -4,7 +4,7 @@
  * 특정 Avengers 에이전트를 태스크에 디스패치합니다.
  * 워크트리 생성 옵션으로 병렬 작업을 지원합니다.
  *
- * Enhanced for M4: Background Task integration with explicit context,
+ * Enhanced for Background Task integration with explicit context,
  * execution modes, and dependency management.
  */
 
@@ -33,7 +33,7 @@ const VALID_AGENTS: AgentType[] = [
 
 /**
  * Enhanced dispatch agent parameters interface
- * Based on M4 design: .claude/designs/m4-parallel-patterns.md
+ * Based on parallel agent patterns: .claude/designs/parallel-patterns.md
  */
 export interface DispatchAgentParams {
   agent: AgentType;

@@ -4,9 +4,10 @@
  * Captain의 핵심 판단 도구입니다.
  * 사용자 요청을 분석하여 적절한 워크플로우와 필요한 에이전트를 결정합니다.
  *
- * M5: 유연한 워크플로우 지원
+ * 유연한 워크플로우 지원
  * - 모든 요청이 코딩을 필요로 하지 않음
  * - Captain이 요청 유형을 판단하여 필요한 에이전트만 호출
+ * - 완료 기준을 명확히 하여 사용자 기대치를 일치시킴
  */
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
@@ -35,6 +36,15 @@ export type WorkflowType =
   | "documentation-only"
   | "testing-only"
   | "full-development";
+
+/**
+ * Completion level types
+ */
+export type CompletionLevel =
+  | "code_only"
+  | "with_tests"
+  | "with_execution"
+  | "with_docs";
 
 /**
  * Workflow preset configuration
@@ -89,6 +99,36 @@ export const WORKFLOW_PRESETS: Record<WorkflowType, WorkflowPreset> = {
 };
 
 /**
+ * Completion criteria mapping
+ */
+export const COMPLETION_CRITERIA_MAP: Record<CompletionLevel, string[]> = {
+  "code_only": [
+    "코드 작성 완료",
+    "타입 체크 통과 (TypeScript/정적 분석)",
+    "컴파일 성공 (해당되는 경우)"
+  ],
+  "with_tests": [
+    "코드 작성 완료",
+    "단위 테스트 작성 및 통과",
+    "통합 테스트 통과",
+    "테스트 커버리지 80% 이상"
+  ],
+  "with_execution": [
+    "코드 작성 완료",
+    "테스트 작성 및 통과",
+    "로컬/개발 환경에서 실행 확인",
+    "기본 사용 시나리오 검증"
+  ],
+  "with_docs": [
+    "코드 작성 완료",
+    "테스트 작성 및 통과",
+    "실행 확인 완료",
+    "API 문서 작성 (해당되는 경우)",
+    "README 또는 가이드 문서 업데이트"
+  ]
+};
+
+/**
  * Analysis result interface
  */
 export interface RequestAnalysis {
@@ -105,6 +145,9 @@ export interface RequestAnalysis {
   keywords: string[];
   unknownTerms: string[];
   confidence: number;
+  // 완료 기준
+  completionLevel: CompletionLevel;
+  suggestedCriteria: string[];
 }
 
 /**
@@ -112,7 +155,13 @@ export interface RequestAnalysis {
  */
 export const analyzeRequestTool: Tool = {
   name: "avengers_analyze_request",
-  description: "Captain의 판단 도구. 사용자 요청을 분석하여 적절한 워크플로우와 필요한 에이전트를 결정합니다. 모든 미션 시작 전에 호출하여 효율적인 작업 분배를 수행합니다.",
+  description: `Captain의 판단 도구. 사용자 요청을 분석하여 적절한 워크플로우와 필요한 에이전트를 결정합니다. 모든 미션 시작 전에 호출하여 효율적인 작업 분배를 수행합니다.
+
+완료 기준 (completionLevel):
+- code_only: 코드 작성 + 타입 체크
+- with_tests: 코드 + 테스트 (기본값)
+- with_execution: 코드 + 테스트 + 실행 확인
+- with_docs: 코드 + 테스트 + 실행 + 문서화`,
   inputSchema: {
     type: "object",
     properties: {
@@ -145,6 +194,12 @@ export const analyzeRequestTool: Tool = {
         type: "boolean",
         description: "리서치 강제 수행 여부",
         default: true
+      },
+      completionLevel: {
+        type: "string",
+        enum: ["code_only", "with_tests", "with_execution", "with_docs"],
+        description: "완료 기준 (선택적, 기본값: with_tests)",
+        default: "with_tests"
       }
     },
     required: ["request"]
@@ -162,6 +217,7 @@ interface AnalyzeParams {
     recentTasks?: string[];
   };
   forceResearch?: boolean;
+  completionLevel?: CompletionLevel;
 }
 
 /**
@@ -421,11 +477,43 @@ function calculateComplexity(
 }
 
 /**
+ * Determine completion level based on request type
+ */
+function determineCompletionLevel(
+  type: RequestType,
+  userSpecified?: CompletionLevel
+): CompletionLevel {
+  // 사용자가 명시적으로 지정한 경우 우선
+  if (userSpecified) {
+    return userSpecified;
+  }
+
+  // 요청 유형별 기본값
+  switch (type) {
+    case "research":
+    case "planning":
+    case "documentation":
+      // 이 유형들은 완료 기준이 적용되지 않음
+      return "with_tests"; // 기본값
+    case "testing":
+      return "with_tests"; // 테스트는 테스트 통과가 기본
+    case "bugfix":
+      return "with_tests"; // 버그 수정도 테스트 필수
+    case "review":
+      return "with_tests"; // 리뷰도 테스트 포함
+    case "development":
+    case "hybrid":
+    default:
+      return "with_tests"; // 일반 개발은 테스트 포함이 기본
+  }
+}
+
+/**
  * Main handler
  */
 export async function handleAnalyzeRequest(args: Record<string, unknown>) {
   const params = args as unknown as AnalyzeParams;
-  const { request, context, forceResearch = true } = params;
+  const { request, context, forceResearch = true, completionLevel } = params;
 
   if (!request || request.trim().length === 0) {
     return {
@@ -459,6 +547,10 @@ export async function handleAnalyzeRequest(args: Record<string, unknown>) {
   // Extract intent
   const intent = extractIntent(request, type);
 
+  // Determine completion level
+  const determinedCompletionLevel = determineCompletionLevel(type, completionLevel);
+  const suggestedCriteria = COMPLETION_CRITERIA_MAP[determinedCompletionLevel];
+
   // Build analysis result
   const analysis: RequestAnalysis = {
     type,
@@ -476,7 +568,9 @@ export async function handleAnalyzeRequest(args: Record<string, unknown>) {
       .flatMap(([, kw]) => kw)
       .filter(kw => request.toLowerCase().includes(kw.toLowerCase())),
     unknownTerms,
-    confidence: unknownTerms.length > 0 ? 0.7 : 0.9
+    confidence: unknownTerms.length > 0 ? 0.7 : 0.9,
+    completionLevel: determinedCompletionLevel,
+    suggestedCriteria
   };
 
   // Build response message
@@ -537,6 +631,13 @@ function buildAnalysisMessage(analysis: RequestAnalysis, preset: WorkflowPreset)
   if (analysis.skipPhases.length > 0) {
     lines.push(`**스킵 단계**: Phase ${analysis.skipPhases.join(", ")}`);
   }
+
+  lines.push(``);
+  lines.push(`**완료 기준**: ${analysis.completionLevel}`);
+  lines.push(`**권장 완료 항목**:`);
+  analysis.suggestedCriteria.forEach(criteria => {
+    lines.push(`  - ${criteria}`);
+  });
 
   lines.push(``);
   lines.push(`**신뢰도**: ${Math.round(analysis.confidence * 100)}%`);
