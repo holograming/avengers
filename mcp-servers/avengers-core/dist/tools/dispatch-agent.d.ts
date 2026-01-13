@@ -11,7 +11,7 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { AgentType, CodeSnippet } from "../agent-templates.js";
 /**
  * Enhanced dispatch agent parameters interface
- * Based on (design: .claude/designs/m4-parallel-patterns.md
+ * Based on parallel agent patterns: .claude/designs/parallel-patterns.md
  */
 export interface DispatchAgentParams {
     agent: AgentType;

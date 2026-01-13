@@ -21,13 +21,19 @@ import { collectResultsTool, handleCollectResults } from "./tools/collect-result
 import { analyzeRequestTool, handleAnalyzeRequest } from "./tools/analyze-request.js";
 import { validateCompletionTool, handleValidateCompletion } from "./tools/validate-completion.js";
 import { agentCommunicateTool, broadcastTool, getSharedContextTool, updateSharedContextTool, handleAgentCommunicate, handleBroadcast, handleGetSharedContext, handleUpdateSharedContext } from "./tools/agent-communication.js";
+// Phase 6/6.5/8 실행 및 배포 도구
+import { runTestsTool, handleRunTests } from "./tools/run-tests.js";
+import { buildProjectTool, handleBuildProject } from "./tools/build-project.js";
+import { runLocalTool, handleRunLocal } from "./tools/run-local.js";
+import { stopProcessTool, handleStopProcess } from "./tools/stop-process.js";
+import { generateCicdTool, handleGenerateCicd } from "./tools/generate-cicd.js";
 export const globalState = {
     agents: new Map(),
     tasks: new Map(),
     taskCounter: 0,
 };
-// 에이전트 초기화
-const agentNames = ["captain", "ironman", "natasha", "groot", "jarvis", "dr-strange", "vision"];
+// 에이전트 초기화 (Hawkeye 추가 - DevOps 전문가)
+const agentNames = ["captain", "ironman", "natasha", "groot", "jarvis", "dr-strange", "vision", "hawkeye"];
 agentNames.forEach(name => {
     globalState.agents.set(name, { name, status: "idle" });
 });
@@ -44,20 +50,30 @@ const server = new Server({
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
+            // 분석 및 검증
             analyzeRequestTool,
             validateCompletionTool,
+            // 통신
             agentCommunicateTool,
             broadcastTool,
             getSharedContextTool,
             updateSharedContextTool,
+            // 에이전트 관리
             dispatchAgentTool,
             getAgentStatusTool,
             assignTaskTool,
             mergeWorktreeTool,
+            // 세션 관리
             summarizeSessionTool,
             saveStateTool,
             restoreStateTool,
             collectResultsTool,
+            // Phase 6/6.5/8: 실행 및 배포 도구
+            runTestsTool,
+            buildProjectTool,
+            runLocalTool,
+            stopProcessTool,
+            generateCicdTool,
         ],
     };
 });
@@ -93,6 +109,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             return handleRestoreState(args);
         case "avengers_collect_results":
             return handleCollectResults(args);
+        // Phase 6/6.5/8: 실행 및 배포 도구
+        case "avengers_run_tests":
+            return handleRunTests(args);
+        case "avengers_build_project":
+            return handleBuildProject(args);
+        case "avengers_run_local":
+            return handleRunLocal(args);
+        case "avengers_stop_process":
+            return handleStopProcess(args);
+        case "avengers_generate_cicd":
+            return handleGenerateCicd(args);
         default:
             return {
                 content: [{ type: "text", text: `Unknown tool: ${name}` }],

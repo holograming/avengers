@@ -62,6 +62,7 @@ avengers_analyze_request({
 | **with_tests** (기본) | 코드 + 단위/통합 테스트 | 일반적인 개발 작업 |
 | **with_execution** | 코드 + 테스트 + 실행 확인 | 중요 기능, 사용자 대면 기능 |
 | **with_docs** | 코드 + 테스트 + 실행 + 문서 | API 공개, 팀 공유 라이브러리 |
+| **full_cicd** | 코드 + 테스트 + 실행 + 문서 + CI/CD | 프로덕션 배포, 자동화 파이프라인 |
 
 ### 명시적 지정
 
@@ -303,6 +304,11 @@ avengers_dispatch_agent({
 | `avengers_save_state` | 세션 상태 저장 | key, includeAgents, includeTasks |
 | `avengers_restore_state` | 세션 상태 복구 | key |
 | `avengers_summarize_session` | 세션 요약 생성 | format, includeMetrics |
+| `avengers_run_tests` | **실제 테스트 실행** | taskId, projectPath, testType, coverage |
+| `avengers_build_project` | **프로젝트 빌드** | taskId, projectPath, buildType |
+| `avengers_run_local` | **로컬 실행 및 헬스체크** | taskId, projectPath, mode, healthCheck |
+| `avengers_stop_process` | **프로세스 종료** | taskId, pid, force |
+| `avengers_generate_cicd` | **CI/CD 설정 생성** | taskId, platform, projectType, features, deployment |
 
 ### avengers-skills
 
@@ -321,10 +327,11 @@ avengers_dispatch_agent({
 | Captain | 오케스트레이터 | readonly | 작업 분석, 할당, 조율 |
 | IronMan | 풀스택 개발자 | edit, bash, write, read | 프론트엔드/백엔드 구현 |
 | Natasha | 백엔드 개발자 | edit, bash, write, read | API, DB, 서버 로직 |
-| Groot | 테스트 전문가 | read, write-test-only | 테스트 작성 및 검증 |
+| Groot | 테스트 전문가 | read, write-test-only, **execute-tests** | 테스트 작성, **실행**, 검증 |
 | Jarvis | 리서처 | readonly, web-search | 기술 조사, 문서 검색 |
 | Dr.Strange | 기획자 | readonly | 요구사항 분석, 설계 |
 | Vision | 문서화 담당 | write-docs-only | 문서 작성, API 명세 |
+| **Hawkeye** | **DevOps 전문가** | **write-cicd-only, execute-build** | **CI/CD, 배포, 인프라** |
 
 ---
 
@@ -332,9 +339,7 @@ avengers_dispatch_agent({
 
 | 커맨드 | 설명 |
 |--------|------|
-| `/mission` | 새 미션 시작 (전체 워크플로우) |
-| `/assemble` | 에이전트 팀 소집 |
-| `/debrief` | 미션 결과 정리 |
+| `/assemble` | 에이전트 팀 소집하여 문제 해결 |
 
 ---
 
