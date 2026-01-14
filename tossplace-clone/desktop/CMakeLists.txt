@@ -30,6 +30,8 @@ set(SOURCES
     src/core/models/product.cpp
     src/core/services/authservice.cpp
     src/core/services/productservice.cpp
+    src/core/bindings/authservicebinding.cpp
+    src/core/bindings/productservicebinding.cpp
 )
 
 set(HEADERS
@@ -39,6 +41,8 @@ set(HEADERS
     src/core/models/product.h
     src/core/services/authservice.h
     src/core/services/productservice.h
+    src/core/bindings/authservicebinding.h
+    src/core/bindings/productservicebinding.h
 )
 
 set(QML_SOURCES

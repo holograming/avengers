@@ -85,9 +85,21 @@ Rectangle {
             }
 
             onClicked: {
-                // TODO: Call AuthService.loginUser
-                loginSuccessful()
+                if (emailInput.text.isEmpty() || passwordInput.text.isEmpty()) {
+                    errorMessage.text = "Email and password are required"
+                    return
+                }
+                authService.login(emailInput.text, passwordInput.text)
             }
+        }
+
+        // Error message
+        Text {
+            id: errorMessage
+            color: "#FF0000"
+            font.pixelSize: 12
+            Layout.alignment: Qt.AlignHCenter
+            visible: text.length > 0
         }
 
         // Separator
@@ -110,6 +122,17 @@ Rectangle {
                     // TODO: Navigate to register screen
                 }
             }
+        }
+    }
+
+    // Signal connections
+    Connections {
+        target: authService
+        function onLoginSuccess(username) {
+            loginSuccessful()
+        }
+        function onLoginFailed(message) {
+            errorMessage.text = message
         }
     }
 }

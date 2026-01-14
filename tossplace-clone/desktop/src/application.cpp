@@ -1,5 +1,7 @@
 #include "application.h"
 #include "core/database/database.h"
+#include "core/bindings/authservicebinding.h"
+#include "core/bindings/productservicebinding.h"
 #include <QQmlContext>
 #include <QStandardPaths>
 #include <QDir>
@@ -48,8 +50,14 @@ bool Application::initializeDatabase() {
 }
 
 bool Application::initializeServices() {
-    // TODO: Initialize AuthService
-    // TODO: Initialize ProductService
+    // Create service bindings
+    auto authBinding = new AuthServiceBinding(this);
+    auto productBinding = new ProductServiceBinding(this);
+
+    // Register with QML engine
+    engine->rootContext()->setContextProperty("authService", authBinding);
+    engine->rootContext()->setContextProperty("productService", productBinding);
+
     return true;
 }
 

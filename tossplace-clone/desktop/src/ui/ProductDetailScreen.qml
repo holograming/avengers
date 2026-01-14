@@ -9,6 +9,9 @@ Rectangle {
 
     signal backClicked()
 
+    property int productId: -1
+    property var productData: ({})
+
     // Header
     Rectangle {
         id: header
@@ -78,7 +81,7 @@ Rectangle {
 
                     // Title
                     Text {
-                        text: "상품명"
+                        text: productData.title || "상품명"
                         font.bold: true
                         font.pixelSize: 18
                         Layout.fillWidth: true
@@ -86,7 +89,7 @@ Rectangle {
 
                     // Price
                     Text {
-                        text: "10,000원"
+                        text: (productData.price || 0) + "원"
                         font.bold: true
                         font.pixelSize: 24
                         color: "#FF6B35"
@@ -115,7 +118,7 @@ Rectangle {
                     }
 
                     TextEdit {
-                        text: "제품의 상세한 설명이 여기 표시됩니다. 제품의 상태, 사용 기간, 하자 여부 등에 대한 정보를 포함합니다."
+                        text: productData.description || "제품의 상세한 설명이 여기 표시됩니다. 제품의 상태, 사용 기간, 하자 여부 등에 대한 정보를 포함합니다."
                         readOnly: true
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
@@ -234,6 +237,12 @@ Rectangle {
             }
 
             Item { Layout.fillHeight: true }
+        }
+    }
+
+    onProductIdChanged: {
+        if (productId >= 0) {
+            productData = productService.getProductById(productId)
         }
     }
 }

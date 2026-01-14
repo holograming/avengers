@@ -1,7 +1,11 @@
 #include "authservice.h"
+#include "../database/database.h"
 #include <QCryptographicHash>
 #include <QUuid>
 #include <QDateTime>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QVariant>
 
 AuthService& AuthService::getInstance() {
     static AuthService instance;
@@ -33,12 +37,52 @@ AuthService::AuthResult AuthService::registerUser(const QString& username,
         return result;
     }
 
-    // TODO: Check if user already exists in database
-    // TODO: Insert user into database with hashed password
+    Database& db = Database::getInstance();
+    if (!db.isConnected()) {
+        result.success = false;
+        result.message = "Database connection failed";
+        return result;
+    }
 
+    // Check if user already exists
+    QSqlQuery checkQuery;
+    checkQuery.prepare("SELECT id FROM users WHERE username = :username OR email = :email");
+    checkQuery.addBindValue(username);
+    checkQuery.addBindValue(email);
+
+    if (!checkQuery.exec()) {
+        result.success = false;
+        result.message = "Database query failed";
+        return result;
+    }
+
+    if (checkQuery.next()) {
+        result.success = false;
+        result.message = "User with this username or email already exists";
+        return result;
+    }
+
+    // Hash password and insert user
+    QString passwordHash = hashPassword(password);
+
+    QSqlQuery insertQuery;
+    insertQuery.prepare("INSERT INTO users (username, email, password_hash, full_name) "
+                       "VALUES (:username, :email, :password_hash, :full_name)");
+    insertQuery.addBindValue(username);
+    insertQuery.addBindValue(email);
+    insertQuery.addBindValue(passwordHash);
+    insertQuery.addBindValue(fullName);
+
+    if (!insertQuery.exec()) {
+        result.success = false;
+        result.message = "Failed to register user: " + insertQuery.lastError().text();
+        return result;
+    }
+
+    int userId = insertQuery.lastInsertId().toInt();
     result.success = true;
     result.message = "Registration successful";
-    result.user = User(-1, username, email, fullName);
+    result.user = User(userId, username, email, fullName);
 
     return result;
 }
@@ -53,12 +97,67 @@ AuthService::AuthResult AuthService::loginUser(const QString& email,
         return result;
     }
 
-    // TODO: Query database for user with this email
-    // TODO: Verify password against stored hash
-    // TODO: Create session token
+    Database& db = Database::getInstance();
+    if (!db.isConnected()) {
+        result.success = false;
+        result.message = "Database connection failed";
+        return result;
+    }
 
-    result.success = false;
-    result.message = "Invalid email or password";
+    // Query user by email
+    QSqlQuery query;
+    query.prepare("SELECT id, username, email, full_name, profile_image_url FROM users WHERE email = :email");
+    query.addBindValue(email);
+
+    if (!query.exec()) {
+        result.success = false;
+        result.message = "Database query failed";
+        return result;
+    }
+
+    if (!query.next()) {
+        result.success = false;
+        result.message = "Invalid email or password";
+        return result;
+    }
+
+    // Get password hash and verify
+    QSqlQuery hashQuery;
+    hashQuery.prepare("SELECT password_hash FROM users WHERE email = :email");
+    hashQuery.addBindValue(email);
+
+    if (!hashQuery.exec() || !hashQuery.next()) {
+        result.success = false;
+        result.message = "Invalid email or password";
+        return result;
+    }
+
+    QString storedHash = hashQuery.value(0).toString();
+
+    if (!verifyPassword(password, storedHash)) {
+        result.success = false;
+        result.message = "Invalid email or password";
+        return result;
+    }
+
+    // Create user object with query results
+    int userId = query.value(0).toInt();
+    QString username = query.value(1).toString();
+    QString userEmail = query.value(2).toString();
+    QString fullName = query.value(3).toString();
+    QString profileImageUrl = query.value(4).toString();
+
+    User user(userId, username, userEmail, fullName, profileImageUrl);
+
+    // Generate and store token
+    QString token = generateToken(user);
+
+    // Set current user
+    setCurrentUser(user);
+
+    result.success = true;
+    result.message = "Login successful";
+    result.user = user;
 
     return result;
 }

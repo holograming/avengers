@@ -46,6 +46,12 @@ Rectangle {
                     border.width: 1
                     radius: 5
                 }
+
+                onAccepted: {
+                    if (text.length > 0) {
+                        productService.searchProducts(text)
+                    }
+                }
             }
 
             Button {
@@ -88,7 +94,7 @@ Rectangle {
                 width: 60
                 height: 30
                 onClicked: {
-                    // TODO: Load all products
+                    productService.loadAllProducts()
                 }
             }
 
@@ -96,24 +102,36 @@ Rectangle {
                 text: "전자제품"
                 width: 60
                 height: 30
+                onClicked: {
+                    productService.loadProductsByCategory("전자제품")
+                }
             }
 
             Button {
                 text: "의류"
                 width: 60
                 height: 30
+                onClicked: {
+                    productService.loadProductsByCategory("의류")
+                }
             }
 
             Button {
                 text: "도서"
                 width: 60
                 height: 30
+                onClicked: {
+                    productService.loadProductsByCategory("도서")
+                }
             }
 
             Button {
                 text: "가구"
                 width: 60
                 height: 30
+                onClicked: {
+                    productService.loadProductsByCategory("가구")
+                }
             }
         }
     }
@@ -130,8 +148,9 @@ Rectangle {
         cellHeight: 350
         clip: true
 
-        model: ListModel {
-            // TODO: Bind to ProductService.getAllProducts()
+        model: productModel
+
+        ListModel {
             id: productModel
         }
 
@@ -207,5 +226,21 @@ Rectangle {
                 }
             }
         }
+    }
+
+    // Signal connections
+    Connections {
+        target: productService
+        function onProductsLoaded(products) {
+            productModel.clear()
+            for (var i = 0; i < products.length; i++) {
+                productModel.append(products[i])
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        // Load all products on screen load
+        productService.loadAllProducts()
     }
 }

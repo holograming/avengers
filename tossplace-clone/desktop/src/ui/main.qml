@@ -42,7 +42,8 @@ Window {
         Component {
             id: productListScreenComponent
             ProductListScreen {
-                onProductSelected: {
+                onProductSelected: function(productId) {
+                    detailScreen.productId = productId
                     screenLoader.sourceComponent = productDetailScreenComponent
                 }
                 onLogoutRequested: {
@@ -55,6 +56,7 @@ Window {
         Component {
             id: productDetailScreenComponent
             ProductDetailScreen {
+                id: detailScreen
                 onBackClicked: {
                     screenLoader.sourceComponent = productListScreenComponent
                 }
