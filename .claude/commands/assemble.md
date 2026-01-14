@@ -24,6 +24,81 @@ avengers_analyze_request({
 
 분석 결과에 따라 즉시 적절한 워크플로우 자동 선택:
 
+### DAG 기반 자동 실행 (v3)
+
+**핵심**: 분석 결과의 `executionPlan.groups`를 순회하며 **그룹 내 병렬, 그룹 간 순차** 실행:
+
+```typescript
+// Phase 0 분석 결과에서 executionPlan 확인
+const { executionPlan } = analysis;
+
+if (executionPlan.enabled) {
+  const completedGroups = new Set<string>();
+
+  for (const group of executionPlan.groups) {
+    // 1. 의존성 확인 (waitForGroups)
+    // 예: Groot의 테스트 그룹은 개발 그룹(IronMan+Natasha) 완료 후에만 시작
+    if (group.waitForGroups.length > 0) {
+      console.log(`[${group.groupName}] 대기: ${group.waitForGroups.join(", ")} 완료 필요`);
+      // 이전 그룹 결과 수집 대기
+    }
+
+    // 2. 그룹 실행 (avengers_execute_group)
+    const result = avengers_execute_group({ group, worktree: true });
+
+    // 3. 그룹 내 작업 병렬 실행 (단일 응답에서 모두 호출!)
+    for (const taskCall of result.taskCalls) {
+      Task({
+        subagent_type: taskCall.subagentType,
+        description: taskCall.description,
+        prompt: taskCall.prompt,
+        run_in_background: true
+      })
+    }
+
+    // 4. 그룹 완료 대기
+    for (const taskCall of result.taskCalls) {
+      TaskOutput({ task_id: taskCall.taskId, block: true })
+    }
+
+    // 5. 다음 그룹 진행
+    completedGroups.add(group.groupId);
+  }
+}
+```
+
+**실행 흐름 예시 (TODO 앱 개발):**
+```
+G1: 리서치 [2개 병렬] (즉시 실행)
+  ├─ Jarvis: 기술 스택 조사 ──┐
+  └─ Jarvis: 경쟁 서비스 분석 ─┴─→ 병렬 실행 후 완료 대기
+                ↓ (G1 완료)
+G2: 기획 (G1 완료 후)
+  └─ Dr.Strange: 아키텍처 설계 → 단일 실행
+                ↓ (G2 완료)
+G3: 개발 [2개 병렬] (G2 완료 후)
+  ├─ IronMan: 프론트엔드 ───┐
+  └─ Natasha: 백엔드 ───────┴─→ 병렬 실행 후 완료 대기
+                ↓ (G3 완료 - IronMan + Natasha 둘 다!)
+G4: 테스트 (G3 완료 후) ← 핵심: 개발 완료 후에만!
+  └─ Groot: 테스트 작성/실행 → 단일 실행
+                ↓ (G4 완료)
+G5: 문서화 [3개 병렬] (G4 완료 후)
+  ├─ Vision: README ──────┐
+  ├─ Vision: API 문서 ────┼─→ 병렬 실행 후 완료 대기
+  └─ Vision: 아키텍처 문서 ─┘
+```
+
+**의존성 규칙:**
+| 에이전트 | 역할 | 선행 조건 |
+|---------|------|----------|
+| Jarvis | 리서치 | 없음 (즉시 시작) |
+| Dr.Strange | 기획 | Jarvis 완료 후 |
+| IronMan | 프론트엔드 | Dr.Strange 완료 후 |
+| Natasha | 백엔드 | Dr.Strange 완료 후 |
+| **Groot** | **테스트** | **IronMan + Natasha 모두 완료 후** |
+| Vision | 문서화 | Groot 완료 후 |
+
 ### 조건부 워크플로우 (자동 실행)
 
 분석 결과의 `mode` 필드에 따라 즉시 에이전트 디스패치:
@@ -36,10 +111,12 @@ Jarvis → Dr.Strange → Captain → 즉시 응답 완료
 
 **mode: "execution"** (Development 요청)
 ```
-Phase 1: Jarvis 리서치 (병렬)
-Phase 2-3: Dr.Strange 전략 수립 (병렬)
-Phase 4: Captain 작업 분배 (병렬)
-Phase 5-8: IronMan/Natasha/Groot 병렬 실행
+executionPlan.groups 순회:
+  G1: 리서치 (병렬) → waitForGroups: []
+  G2: 기획 → waitForGroups: [G1]
+  G3: 개발 (IronMan+Natasha 병렬) → waitForGroups: [G2]
+  G4: 테스트 (Groot) → waitForGroups: [G3] ← 핵심!
+  G5: 문서화 (병렬) → waitForGroups: [G4]
 → 끝날 때까지 계속 시도 (Infinity War 원칙)
 ```
 
@@ -50,6 +127,91 @@ Phase 5-8: IronMan/Natasha/Groot 병렬 실행
 - ✅ **최소 질문**: 불가능한 경우에만 사용자에게 질문
 - ✅ **끝까지 진행**: 테스트 통과/검증 완료까지 멈추지 않음
 - ✅ **병렬 작업**: 독립적 작업은 동시에 진행 (Worktree)
+
+---
+
+## 병렬 실행 패턴 (Task 도구 활용)
+
+**핵심**: Claude의 `Task` 도구를 사용하여 **실제 서브에이전트를 병렬 spawn**.
+
+MCP 도구(`avengers_dispatch_agent`)는 상태만 관리하고, 실제 병렬 실행은 Claude의 `Task` 도구가 담당합니다.
+
+### 패턴 1: 단일 메시지에서 여러 Task 호출
+
+**중요**: 독립적인 작업은 **하나의 응답에서 여러 Task 도구를 동시 호출**해야 병렬 실행됩니다.
+
+```
+// ✅ 올바른 병렬 실행 (하나의 응답에서 3개 Task 동시 호출)
+Task({ subagent_type: "general-purpose", description: "IronMan: 프론트엔드", prompt: "...", run_in_background: true })
+Task({ subagent_type: "general-purpose", description: "Natasha: 백엔드", prompt: "...", run_in_background: true })
+Task({ subagent_type: "general-purpose", description: "Groot: 테스트", prompt: "...", run_in_background: true })
+
+// ❌ 순차 실행 (각각 별도 응답에서 호출)
+Task({ ... })  // 응답 1
+Task({ ... })  // 응답 2 (앞의 작업 완료 후)
+```
+
+### 패턴 2: 에이전트 역할 프롬프트 구성
+
+각 Task에 Avengers 에이전트 역할과 작업 컨텍스트를 포함:
+
+```typescript
+const ironmanPrompt = `
+당신은 IronMan (풀스택 개발자)입니다.
+
+## 역할
+- 프론트엔드/백엔드 구현
+- 권한: edit, bash, write, read
+
+## 작업
+${taskDescription}
+
+## 컨텍스트
+${relevantFiles}
+
+## 완료 조건
+${acceptanceCriteria}
+
+## 제약 사항
+- 기존 아키텍처 준수
+- TDD 방식으로 개발
+- 작업 완료 후 요약 반환
+`;
+
+Task({
+  subagent_type: "general-purpose",
+  description: "IronMan: 프론트엔드 구현",
+  prompt: ironmanPrompt,
+  run_in_background: true
+})
+```
+
+### 패턴 3: 결과 수집
+
+```typescript
+// 개별 결과 확인 (blocking)
+TaskOutput({ task_id: "agent-xxx", block: true })
+
+// 여러 작업 집계
+avengers_collect_results({
+  taskIds: ["T001", "T002", "T003"],
+  timeout: 300000,
+  format: "summary"
+})
+```
+
+### 패턴 4: Phase별 병렬 실행 가이드
+
+| Phase | 병렬 대상 | subagent_type | 병렬 수 |
+|-------|----------|---------------|--------|
+| Phase 1 (리서치) | 토픽별 조사 | `Explore` | 2-4개 |
+| Phase 2-3 (기획) | 접근법 탐색 | `Plan` | 2-3개 |
+| Phase 5 (개발) | 에이전트별 작업 | `general-purpose` | 2-4개 |
+| Phase 5-Review | 리뷰어별 검토 | `general-purpose` | 2-3개 |
+| Phase 6 (테스트) | 테스트 유형별 | `general-purpose` | 3개 |
+| Phase 7 (문서화) | 문서 유형별 | `general-purpose` | 3-4개 |
+
+---
 
 ## Full Development 워크플로우 (실제 Infinity War 구현)
 
@@ -82,23 +244,93 @@ Phase 5-8: IronMan/Natasha/Groot 병렬 실행
     └─ 완료 기준에 따라 자동 실행
 ```
 
-### Phase 1: 정보 수집 (Jarvis)
+### Phase 1: 정보 수집 (Jarvis) - 병렬 리서치
 
-Jarvis 호출 → 리서치 완료까지 계속 시도:
+리서치 토픽을 분석하여 **복수 토픽은 병렬 조사**:
 
-```
+**단일 토픽** (간단한 질문):
+```typescript
+// MCP 도구로 순차 실행
 avengers_dispatch_agent({
   agent: "jarvis",
   task: "리서치: $ARGUMENTS",
   mode: "foreground"
 })
-→ 완료될 때까지 대기
-→ 실패 시 자동 재시도
 ```
 
-### Phase 2-3: 기획 + 검증 평가 (Captain + Dr.Strange)
+**복수 토픽** (복잡한 요청 - 3개 이상 조사 필요 시):
+```typescript
+// Task 도구로 병렬 리서치 (단일 응답에서 모두 호출)
+Task({
+  subagent_type: "Explore",
+  description: "Jarvis: 기술 스택 조사",
+  prompt: "프레임워크, 라이브러리, DB 옵션 조사...",
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "Explore",
+  description: "Jarvis: 아키텍처 패턴 분석",
+  prompt: "마이크로서비스, 모놀리식, 이벤트 기반 비교...",
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "Explore",
+  description: "Jarvis: 보안/성능 모범 사례",
+  prompt: "인증, 암호화, 캐싱 전략 조사...",
+  run_in_background: true
+})
+
+// 결과 수집
+TaskOutput({ task_id: "...", block: true })  // 각 결과 확인
+```
+
+**리서치 병렬화 기준:**
+- 토픽이 3개 이상이면 병렬 실행
+- 각 토픽이 독립적이면 병렬 실행
+- 토픽 간 의존성이 있으면 순차 실행
+
+### Phase 2-3: 기획 + 검증 평가 (Captain + Dr.Strange) - 병렬 탐색
 
 리서치 결과 기반으로 기획 → **평가 시스템으로 품질 검증**:
+
+#### 2-3-0. 병렬 접근법 탐색 (선택적)
+
+복잡한 프로젝트의 경우 **여러 설계 접근법을 병렬로 탐색**:
+
+```typescript
+// 3가지 아키텍처 접근법 병렬 탐색 (단일 응답에서 모두 호출)
+Task({
+  subagent_type: "Plan",
+  description: "Dr.Strange: 접근법 A - 마이크로서비스",
+  prompt: "마이크로서비스 아키텍처로 설계 제안...",
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "Plan",
+  description: "Dr.Strange: 접근법 B - 모놀리식",
+  prompt: "모듈화된 모놀리식 아키텍처로 설계 제안...",
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "Plan",
+  description: "Dr.Strange: 접근법 C - 이벤트 기반",
+  prompt: "이벤트 드리븐 아키텍처로 설계 제안...",
+  run_in_background: true
+})
+
+// 결과 수집 후 최적 접근법 선택
+TaskOutput({ task_id: "...", block: true })
+// → 각 접근법의 장단점 비교 → 최적 선택
+```
+
+**병렬 탐색 기준:**
+- 아키텍처 결정이 필요한 경우
+- 복잡도가 "high"인 경우
+- 여러 기술 스택 옵션이 있는 경우
 
 #### 2-3-1. 기획 생성
 ```
@@ -187,18 +419,104 @@ for each task in planned_tasks:
 → 모든 에이전트 병렬 실행 시작
 ```
 
-### Phase 5: 병렬 개발 (IronMan/Natasha/Groot)
+### Phase 5: 병렬 개발 (IronMan/Natasha) - Task 기반 병렬 Spawn
 
-각 에이전트 **독립적으로** TDD 기반 개발:
+**중요**: IronMan과 Natasha만 병렬 실행. **Groot(테스트)는 개발 완료 후 별도 그룹에서 실행!**
 
+**올바른 의존성 구조:**
 ```
-각 워크트리에서 동시 진행:
-  1. Groot: 테스트 작성 (RED)
-  2. IronMan/Natasha: 구현 (GREEN)
-  3. Groot: 통과 확인 (REFACTOR)
-
-→ 모든 작업 완료까지 대기
+G3: 개발 (병렬)          G4: 테스트 (순차)
+┌──────────────┐         ┌───────────────┐
+│ IronMan ─────┤         │               │
+│              │ ──완료→ │ Groot         │
+│ Natasha ─────┤         │               │
+└──────────────┘         └───────────────┘
+      ↑                         ↑
+  waitForGroups: []      waitForGroups: [G3]
 ```
+
+**잘못된 예** (Groot를 개발과 동시 실행 ❌):
+```typescript
+// ❌ Groot가 IronMan/Natasha와 동시에 실행됨 - 잘못됨!
+Task({ description: "IronMan: 프론트엔드" })
+Task({ description: "Natasha: 백엔드" })
+Task({ description: "Groot: 테스트" })  // 개발이 안 끝났는데 테스트?
+```
+
+**올바른 예** (DAG 기반 의존성 ✅):
+```typescript
+// ✅ G3: 개발 그룹 (IronMan + Natasha 병렬)
+Task({ description: "IronMan: 프론트엔드", run_in_background: true })
+Task({ description: "Natasha: 백엔드", run_in_background: true })
+
+// 개발 완료 대기
+TaskOutput({ task_id: "ironman-xxx", block: true })
+TaskOutput({ task_id: "natasha-xxx", block: true })
+
+// ✅ G4: 테스트 그룹 (개발 완료 후 Groot 실행)
+Task({ description: "Groot: 테스트", run_in_background: true })
+```
+
+단일 응답에서 **개발 에이전트(IronMan/Natasha)**를 **Task 도구로 병렬 spawn**:
+
+```typescript
+// Phase 4에서 분배된 작업을 병렬 실행
+// IronMan과 Natasha만 병렬! Groot는 Phase 6에서 개발 완료 후 실행
+
+// 1. 상태 등록 (MCP) - IronMan과 Natasha만
+avengers_assign_task({ title: "프론트엔드 컴포넌트", assignee: "ironman" })
+avengers_assign_task({ title: "API 엔드포인트", assignee: "natasha" })
+
+// 2. 개발 에이전트 병렬 spawn (Task 도구 - 단일 응답에서 모두 호출)
+Task({
+  subagent_type: "general-purpose",
+  description: "IronMan: 프론트엔드 컴포넌트",
+  prompt: `
+    당신은 IronMan (풀스택 개발자)입니다.
+
+    ## 작업
+    ${taskDescription}
+
+    ## 컨텍스트
+    - 프로젝트: ${projectPath}
+    - 관련 파일: ${relevantFiles}
+
+    ## 완료 조건
+    - TDD 방식으로 개발
+    - 작업 완료 후 요약 반환
+  `,
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "general-purpose",
+  description: "Natasha: API 엔드포인트",
+  prompt: `
+    당신은 Natasha (백엔드 개발자)입니다.
+    ...
+  `,
+  run_in_background: true
+})
+
+// 3. 개발 완료 대기 (Groot 실행 전에!)
+TaskOutput({ task_id: "ironman-xxx", block: true })
+TaskOutput({ task_id: "natasha-xxx", block: true })
+
+// 4. 결과 집계
+avengers_collect_results({
+  taskIds: ["T001", "T002"],
+  timeout: 300000,
+  format: "summary"
+})
+
+// ⚠️ Groot(테스트)는 Phase 6에서 개발 완료 후 실행!
+```
+
+**병렬 개발 규칙:**
+- IronMan과 Natasha만 병렬 spawn (독립적인 프론트/백엔드)
+- **Groot는 개발 완료 후 별도 그룹에서 실행** (의존성!)
+- 각 에이전트는 별도 worktree에서 작업
+- 결과 수집 후 충돌 확인
 
 ### Phase 5-Review: 코드 리뷰 검증 (IronMan/Natasha/Groot)
 
@@ -409,17 +727,76 @@ avengers_build_and_verify({
 
 **핵심: 최대 5회 재시도. 빌드 성공 + 기본 기능 동작 확인 필수. 완벽함보다 동작함이 우선.**
 
-### Phase 7: 문서화 (Vision)
+### Phase 7: 문서화 (Vision) - 병렬 문서 생성
 
-완료 기준에 따라 자동 생성:
+**중요**: 여러 문서를 **Task 도구로 병렬 생성**:
 
+```typescript
+// 문서별 병렬 생성 (단일 응답에서 모두 호출)
+Task({
+  subagent_type: "general-purpose",
+  description: "Vision: README 생성",
+  prompt: `
+    당신은 Vision (문서화 담당)입니다.
+
+    ## 작업
+    README.md 생성 - 프로젝트 소개, 설치, 실행 가이드
+
+    ## 프로젝트 정보
+    ${projectSummary}
+
+    ## 포함 항목
+    - 프로젝트 개요
+    - 주요 기능
+    - 설치 방법
+    - 실행 방법
+    - 환경 변수 설정
+  `,
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "general-purpose",
+  description: "Vision: API 문서 생성",
+  prompt: `
+    당신은 Vision (문서화 담당)입니다.
+
+    ## 작업
+    API.md 생성 - API 엔드포인트 명세
+
+    ## 엔드포인트 목록
+    ${apiEndpoints}
+  `,
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "general-purpose",
+  description: "Vision: 아키텍처 문서 생성",
+  prompt: `
+    당신은 Vision (문서화 담당)입니다.
+
+    ## 작업
+    ARCHITECTURE.md 생성 - 시스템 아키텍처 설명
+
+    ## 컴포넌트 구조
+    ${componentStructure}
+  `,
+  run_in_background: true
+})
+
+// 결과 수집
+TaskOutput({ task_id: "...", block: true })
 ```
+
+**단일 문서** (간단한 경우):
+```typescript
+// MCP 도구로 순차 실행
 avengers_dispatch_agent({
   agent: "vision",
-  task: "생성: README, API 문서, 아키텍처 다이어그램",
+  task: "생성: README",
   mode: "foreground"
 })
-→ 문서 생성될 때까지 계속 시도
 ```
 
 ### Phase 8: CI/CD 파이프라인 (Hawkeye)

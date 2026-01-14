@@ -770,7 +770,7 @@ async function handleCppDependencies(projectPath: string): Promise<{
     // Installation failed but non-critical for POC
     return {
       warning: `⚠️ Package installation encountered an issue: ${error instanceof Error ? error.message : String(error)}\n\nContinuing with build (manual install may be needed)`,
-      toolchainFile
+      toolchainFile: toolchainFile ?? undefined
     };
   }
 }

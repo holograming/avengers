@@ -11,7 +11,7 @@
  */
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { AgentType } from "../agent-templates.js";
+import { AgentType, agentRoles } from "../agent-templates.js";
 
 /**
  * Request type classification
@@ -134,6 +134,43 @@ export const COMPLETION_CRITERIA_MAP: Record<CompletionLevel, string[]> = {
 };
 
 /**
+ * 개별 실행 작업
+ */
+export interface ExecutionTask {
+  taskId: string;
+  agent: AgentType;
+  role: string;
+  description: string;
+  priority: "critical" | "high" | "medium" | "low";
+  prompt: string;
+  context?: {
+    files?: string[];
+    references?: string[];
+  };
+  dependsOn?: string[];
+}
+
+/**
+ * 실행 그룹 - 같은 그룹 내 작업은 병렬 실행
+ * 그룹 간에는 순차 실행 (waitForGroups로 의존성 지정)
+ */
+export interface ExecutionGroup {
+  groupId: string;
+  groupName: string;
+  tasks: ExecutionTask[];
+  waitForGroups: string[];
+  subagentType: "Explore" | "Plan" | "general-purpose";
+}
+
+/**
+ * DAG 기반 실행 계획
+ */
+export interface ExecutionPlan {
+  enabled: boolean;
+  groups: ExecutionGroup[];
+}
+
+/**
  * Analysis result interface
  */
 export interface RequestAnalysis {
@@ -155,6 +192,8 @@ export interface RequestAnalysis {
   suggestedCriteria: string[];
   // 실행 모드
   mode: "planning" | "execution";
+  // DAG 기반 실행 계획 (v3)
+  executionPlan: ExecutionPlan;
 }
 
 /**
@@ -523,6 +562,203 @@ function determineCompletionLevel(
 }
 
 /**
+ * Extract research topics from request
+ */
+function extractResearchTopics(request: string): string[] {
+  const topics: string[] = [];
+
+  // 고유명사 추출
+  const properNouns = extractProperNouns(request);
+  if (properNouns.length > 0) {
+    topics.push(...properNouns.map(noun => `${noun} 기술 조사`));
+  }
+
+  // 기본 토픽 추가
+  if (topics.length === 0) {
+    topics.push("요구사항 분석");
+  }
+
+  // 기술 스택 조사는 항상 포함
+  if (request.includes("만들어") || request.includes("구현") || request.includes("개발")) {
+    topics.push("기술 스택 및 아키텍처 조사");
+  }
+
+  // 경쟁 서비스 분석 (서비스 개발인 경우)
+  if (request.includes("서비스") || request.includes("앱") || request.includes("플랫폼")) {
+    topics.push("유사 서비스 및 경쟁 분석");
+  }
+
+  return topics.slice(0, 3); // 최대 3개
+}
+
+/**
+ * Build agent-specific prompt
+ */
+function buildAgentPrompt(agent: AgentType, request: string, taskDescription: string): string {
+  const role = agentRoles[agent] || agent;
+  return `# ${role} 작업 지시
+
+## 원본 요청
+${request}
+
+## 할당된 작업
+${taskDescription}
+
+## 작업 지침
+1. 할당된 작업 범위 내에서만 작업합니다.
+2. TDD 원칙을 따릅니다 (테스트 먼저 작성).
+3. 작업 완료 후 결과를 요약하여 보고합니다.
+4. 불확실한 사항이 있으면 Captain에게 문의합니다.
+
+## 산출물
+작업 완료 시 다음을 포함하여 보고:
+- 수정/생성한 파일 목록
+- 주요 변경 사항 요약
+- 테스트 결과 (해당하는 경우)
+- 추가 작업 필요 여부`;
+}
+
+/**
+ * Build DAG-based execution plan (v3)
+ *
+ * 핵심 원칙:
+ * - 그룹 내 작업은 병렬 실행
+ * - 그룹 간에는 waitForGroups로 의존성 관리
+ * - Groot(테스트)는 IronMan/Natasha(개발) 완료 후에만 실행
+ */
+function buildExecutionPlan(
+  workflow: WorkflowType,
+  requiredAgents: AgentType[],
+  request: string,
+  unknownTerms: string[]
+): ExecutionPlan {
+  const groups: ExecutionGroup[] = [];
+  let groupCounter = 1;
+  let taskCounter = 1;
+
+  // === 그룹 1: 리서치 (선행 없음, 병렬 가능) ===
+  if (requiredAgents.includes("jarvis")) {
+    const researchTopics = extractResearchTopics(request);
+    const tasks: ExecutionTask[] = researchTopics.map((topic, i) => ({
+      taskId: `T${taskCounter++}`,
+      agent: "jarvis" as AgentType,
+      role: agentRoles["jarvis"],
+      description: topic,
+      priority: "high" as const,
+      prompt: buildAgentPrompt("jarvis", request, topic),
+      context: {
+        references: unknownTerms.length > 0 ? unknownTerms.map(t => `웹 검색: ${t}`) : []
+      }
+    }));
+
+    groups.push({
+      groupId: `G${groupCounter++}`,
+      groupName: "리서치",
+      waitForGroups: [],
+      subagentType: "Explore",
+      tasks
+    });
+  }
+
+  // === 그룹 2: 기획 (리서치 완료 후) ===
+  if (requiredAgents.includes("dr-strange")) {
+    const prevGroupId = groups.length > 0 ? groups[groups.length - 1].groupId : null;
+    groups.push({
+      groupId: `G${groupCounter++}`,
+      groupName: "기획",
+      waitForGroups: prevGroupId ? [prevGroupId] : [],
+      subagentType: "Plan",
+      tasks: [{
+        taskId: `T${taskCounter++}`,
+        agent: "dr-strange",
+        role: agentRoles["dr-strange"],
+        description: "아키텍처 설계 및 작업 분배",
+        priority: "high",
+        prompt: buildAgentPrompt("dr-strange", request, "아키텍처 설계 및 세부 작업 계획 수립")
+      }]
+    });
+  }
+
+  // === 그룹 3: 개발 (기획 완료 후, IronMan + Natasha 병렬) ===
+  // 중요: Groot는 여기에 포함하지 않음!
+  if (workflow === "full-development" || workflow === "quick-fix") {
+    const devAgents = requiredAgents.filter(a =>
+      ["ironman", "natasha"].includes(a)
+    );
+
+    if (devAgents.length > 0) {
+      const prevGroupId = groups.length > 0 ? groups[groups.length - 1].groupId : null;
+      const devTasks: ExecutionTask[] = devAgents.map(agent => ({
+        taskId: `T${taskCounter++}`,
+        agent,
+        role: agentRoles[agent],
+        description: agent === "ironman" ? "프론트엔드 구현" : "백엔드 구현",
+        priority: "high" as const,
+        prompt: buildAgentPrompt(agent, request,
+          agent === "ironman" ? "프론트엔드/UI 구현" : "백엔드/API 구현")
+      }));
+
+      groups.push({
+        groupId: `G${groupCounter++}`,
+        groupName: "개발",
+        waitForGroups: prevGroupId ? [prevGroupId] : [],
+        subagentType: "general-purpose",
+        tasks: devTasks
+      });
+    }
+  }
+
+  // === 그룹 4: 테스트 (개발 완료 후 - Groot) ===
+  // 핵심: 개발 그룹(IronMan + Natasha) 완료 후에만 실행!
+  if (requiredAgents.includes("groot")) {
+    const devGroup = groups.find(g => g.groupName === "개발");
+    const waitFor = devGroup ? [devGroup.groupId] :
+                    groups.length > 0 ? [groups[groups.length - 1].groupId] : [];
+
+    groups.push({
+      groupId: `G${groupCounter++}`,
+      groupName: "테스트",
+      waitForGroups: waitFor,
+      subagentType: "general-purpose",
+      tasks: [{
+        taskId: `T${taskCounter++}`,
+        agent: "groot",
+        role: agentRoles["groot"],
+        description: "단위/통합 테스트 작성 및 실행",
+        priority: "high",
+        prompt: buildAgentPrompt("groot", request, "테스트 코드 작성 및 실행, 커버리지 확인")
+      }]
+    });
+  }
+
+  // === 그룹 5: 문서화 (테스트 완료 후, 병렬 가능) ===
+  if (requiredAgents.includes("vision")) {
+    const prevGroupId = groups.length > 0 ? groups[groups.length - 1].groupId : null;
+    const docTopics = ["README 작성/업데이트", "API 문서 생성", "아키텍처 문서 작성"];
+
+    groups.push({
+      groupId: `G${groupCounter++}`,
+      groupName: "문서화",
+      waitForGroups: prevGroupId ? [prevGroupId] : [],
+      subagentType: "general-purpose",
+      tasks: docTopics.map((topic, i) => ({
+        taskId: `T${taskCounter++}`,
+        agent: "vision" as AgentType,
+        role: agentRoles["vision"],
+        description: topic,
+        priority: "medium" as const,
+        prompt: buildAgentPrompt("vision", request, topic)
+      }))
+    });
+  }
+
+  return {
+    enabled: groups.length > 0,
+    groups
+  };
+}
+
+/**
  * Main handler
  */
 export async function handleAnalyzeRequest(args: Record<string, unknown>) {
@@ -578,6 +814,9 @@ export async function handleAnalyzeRequest(args: Record<string, unknown>) {
       : "execution";
   }
 
+  // Build DAG-based execution plan (v3)
+  const executionPlan = buildExecutionPlan(workflow, preset.agents, request, unknownTerms);
+
   // Build analysis result
   const analysis: RequestAnalysis = {
     type,
@@ -598,7 +837,8 @@ export async function handleAnalyzeRequest(args: Record<string, unknown>) {
     confidence: unknownTerms.length > 0 ? 0.7 : 0.9,
     completionLevel: determinedCompletionLevel,
     suggestedCriteria,
-    mode
+    mode,
+    executionPlan
   };
 
   // Build response message
@@ -667,6 +907,31 @@ function buildAnalysisMessage(analysis: RequestAnalysis, preset: WorkflowPreset)
   analysis.suggestedCriteria.forEach(criteria => {
     lines.push(`  - ${criteria}`);
   });
+
+  // DAG 기반 실행 계획 표시 (v3)
+  if (analysis.executionPlan?.enabled) {
+    lines.push(``);
+    lines.push(`---`);
+    lines.push(`## 실행 계획 (DAG 기반)`);
+    lines.push(``);
+
+    for (const group of analysis.executionPlan.groups) {
+      const waitInfo = group.waitForGroups.length > 0
+        ? ` (대기: ${group.waitForGroups.join(", ")} 완료 후)`
+        : ` (즉시 실행)`;
+      const parallelInfo = group.tasks.length > 1 ? ` [${group.tasks.length}개 병렬]` : "";
+
+      lines.push(`### ${group.groupId}: ${group.groupName}${parallelInfo}${waitInfo}`);
+
+      for (const task of group.tasks) {
+        lines.push(`  - ${task.taskId}: ${task.agent} - ${task.description}`);
+      }
+      lines.push(``);
+    }
+
+    lines.push(`**총 그룹 수**: ${analysis.executionPlan.groups.length}개`);
+    lines.push(`**총 작업 수**: ${analysis.executionPlan.groups.reduce((acc, g) => acc + g.tasks.length, 0)}개`);
+  }
 
   lines.push(``);
   lines.push(`**신뢰도**: ${Math.round(analysis.confidence * 100)}%`);

@@ -25,6 +25,7 @@ import { restoreStateTool, handleRestoreState } from "./tools/restore-state.js";
 import { collectResultsTool, handleCollectResults } from "./tools/collect-results.js";
 import { analyzeRequestTool, handleAnalyzeRequest } from "./tools/analyze-request.js";
 import { validateCompletionTool, handleValidateCompletion } from "./tools/validate-completion.js";
+import { executeGroupTool, handleExecuteGroup } from "./tools/execute-group.js";
 import {
   agentCommunicateTool,
   broadcastTool,
@@ -91,6 +92,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       // 분석 및 검증
       analyzeRequestTool,
       validateCompletionTool,
+      executeGroupTool,
       // 통신
       agentCommunicateTool,
       broadcastTool,
@@ -125,6 +127,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return handleAnalyzeRequest(args);
     case "avengers_validate_completion":
       return handleValidateCompletion(args);
+    case "avengers_execute_group":
+      return handleExecuteGroup(args);
     case "avengers_agent_communicate":
       return handleAgentCommunicate(args);
     case "avengers_broadcast":

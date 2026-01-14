@@ -4,8 +4,32 @@ Background Task 기반 병렬 에이전트 실행을 가이드합니다.
 
 ## Quick Start
 
+### 방법 1: Task 도구 사용 (권장 - 진정한 병렬)
+
 ```typescript
-// 병렬 작업 dispatch
+// 단일 응답에서 여러 Task 호출 = 진정한 병렬 실행
+Task({
+  subagent_type: "general-purpose",
+  description: "IronMan: 프론트엔드 컴포넌트",
+  prompt: "당신은 IronMan입니다. 프론트엔드 컴포넌트를 구현하세요...",
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "general-purpose",
+  description: "Natasha: API 엔드포인트",
+  prompt: "당신은 Natasha입니다. API 엔드포인트를 구현하세요...",
+  run_in_background: true
+})
+
+// 결과 수집
+TaskOutput({ task_id: "xxx", block: true })
+```
+
+### 방법 2: MCP 도구 사용 (상태 관리용)
+
+```typescript
+// 상태 등록 (실제 병렬 실행 아님)
 avengers_dispatch_agent({
   agent: "ironman",
   task: "프론트엔드 컴포넌트 구현",
@@ -18,9 +42,21 @@ avengers_dispatch_agent({
   worktree: true
 })
 
-// 나중에 결과 확인
+// 상태 확인
 avengers_get_agent_status({})
 ```
+
+---
+
+## MCP 도구 vs Task 도구
+
+| 구분 | MCP 도구 | Task 도구 |
+|------|---------|----------|
+| 용도 | 상태 관리, 작업 등록 | 실제 서브에이전트 spawn |
+| 병렬 실행 | ❌ 상태만 등록 | ✅ 진정한 병렬 |
+| 사용 시점 | 작업 추적, 결과 집계 | 실제 작업 실행 |
+
+**권장 패턴**: MCP로 상태 등록 → Task로 실제 실행 → MCP로 결과 집계
 
 ---
 
@@ -530,7 +566,79 @@ avengers_assign_task({ title: "Password reset", assignee: "ironman" })
 | `skills/efficiency` | 토큰 효율성 | 컨텍스트 관리 |
 | `skills/brainstorming` | 브레인스토밍 | 작업 분배 전 기획 |
 
-### 사용 예시 워크플로우
+### Task 도구 통합 워크플로우 (권장)
+
+```typescript
+// 1. 브레인스토밍으로 작업 분석
+avengers_skill_brainstorm({ phase: "start", topic: "multi-feature" })
+
+// 2. 작업 분배 (상태 등록)
+avengers_assign_task({ title: "Feature A", assignee: "ironman" })
+avengers_assign_task({ title: "Feature B", assignee: "natasha" })
+avengers_assign_task({ title: "Tests", assignee: "groot" })
+
+// 3. 실제 병렬 spawn (단일 응답에서 모두 호출!)
+Task({
+  subagent_type: "general-purpose",
+  description: "IronMan: Feature A",
+  prompt: `
+    당신은 IronMan (풀스택 개발자)입니다.
+    ## 작업: Feature A 구현
+    ## 완료 조건: TDD, 테스트 통과
+  `,
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "general-purpose",
+  description: "Natasha: Feature B",
+  prompt: `
+    당신은 Natasha (백엔드 개발자)입니다.
+    ## 작업: Feature B 구현
+    ...
+  `,
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "general-purpose",
+  description: "Groot: 테스트 작성",
+  prompt: `
+    당신은 Groot (테스트 전문가)입니다.
+    ## 작업: 테스트 작성
+    ...
+  `,
+  run_in_background: true
+})
+
+// 4. 결과 수집
+TaskOutput({ task_id: "ironman-xxx", block: true })
+TaskOutput({ task_id: "natasha-xxx", block: true })
+TaskOutput({ task_id: "groot-xxx", block: true })
+
+// 5. 결과 집계
+avengers_collect_results({
+  taskIds: ["T001", "T002", "T003"],
+  timeout: 300000,
+  format: "summary"
+})
+
+// 6. 코드 리뷰 후 병합
+avengers_skill_code_review({ phase: "request", taskId: "T001" })
+avengers_merge_worktree({ taskId: "T001", createPR: true })
+```
+
+### Phase별 Task subagent_type 선택
+
+| Phase | 작업 유형 | subagent_type | 설명 |
+|-------|----------|---------------|------|
+| Phase 1 | 리서치 | `Explore` | 코드/문서 탐색에 최적화 |
+| Phase 2-3 | 기획 | `Plan` | 설계 계획 수립에 최적화 |
+| Phase 5 | 개발 | `general-purpose` | 범용 코드 작성 |
+| Phase 6 | 테스트 | `general-purpose` | 테스트 실행 |
+| Phase 7 | 문서화 | `general-purpose` | 문서 생성 |
+
+### 기존 워크플로우 (MCP만 사용 - 상태 관리용)
 
 ```typescript
 // 1. 브레인스토밍으로 작업 분석
@@ -541,7 +649,7 @@ avengers_assign_task({ title: "Feature A", assignee: "ironman" })
 avengers_assign_task({ title: "Feature B", assignee: "natasha" })
 avengers_assign_task({ title: "Tests", assignee: "groot" })
 
-// 3. 병렬 dispatch
+// 3. 병렬 dispatch (상태만 등록)
 avengers_dispatch_agent({ agent: "ironman", task: "...", worktree: true })
 avengers_dispatch_agent({ agent: "natasha", task: "...", worktree: true })
 avengers_dispatch_agent({ agent: "groot", task: "...", worktree: true })

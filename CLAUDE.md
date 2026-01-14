@@ -444,7 +444,69 @@ avengers_validate_completion({
 
 ## 병렬 에이전트 패턴
 
-### Background Task 기반 병렬 실행
+### MCP 도구 vs Task 도구
+
+Avengers 시스템은 두 가지 도구를 사용합니다:
+
+| 도구 | 역할 | 실제 병렬 실행 |
+|------|------|--------------|
+| MCP 도구 (`avengers_dispatch_agent`) | 상태 관리, 작업 등록 | ❌ 상태만 등록 |
+| Task 도구 (`Task`) | 실제 서브에이전트 spawn | ✅ 진정한 병렬 |
+
+**중요**: 진정한 병렬 실행을 위해서는 **Claude의 Task 도구**를 사용해야 합니다.
+
+### Task 도구 기반 병렬 실행 (권장)
+
+```typescript
+// 1. 상태 등록 (MCP 도구)
+avengers_assign_task({ title: "Feature A", assignee: "ironman" })
+avengers_assign_task({ title: "Feature B", assignee: "natasha" })
+
+// 2. 실제 병렬 spawn (Task 도구 - 단일 응답에서 모두 호출!)
+Task({
+  subagent_type: "general-purpose",
+  description: "IronMan: Feature A 구현",
+  prompt: `
+    당신은 IronMan (풀스택 개발자)입니다.
+    ## 작업: Feature A 구현
+    ## 컨텍스트: ${relevantFiles}
+    ## 완료 조건: TDD 방식, 테스트 통과
+  `,
+  run_in_background: true
+})
+
+Task({
+  subagent_type: "general-purpose",
+  description: "Natasha: Feature B 구현",
+  prompt: `
+    당신은 Natasha (백엔드 개발자)입니다.
+    ## 작업: Feature B 구현
+    ...
+  `,
+  run_in_background: true
+})
+
+// 3. 결과 수집
+TaskOutput({ task_id: "ironman-xxx", block: true })
+TaskOutput({ task_id: "natasha-xxx", block: true })
+```
+
+### Phase별 subagent_type 선택
+
+| Phase | 작업 유형 | subagent_type |
+|-------|----------|---------------|
+| Phase 1 (리서치) | 코드/문서 탐색 | `Explore` |
+| Phase 2-3 (기획) | 설계 계획 수립 | `Plan` |
+| Phase 5 (개발) | 코드 작성, 테스트 | `general-purpose` |
+| Phase 7 (문서화) | 문서 생성 | `general-purpose` |
+
+### 병렬 실행 규칙
+
+1. **단일 응답에서 모든 Task 호출**: 여러 Task를 병렬로 실행하려면 하나의 응답에서 모두 호출
+2. **run_in_background: true**: 백그라운드 실행으로 병렬 처리
+3. **결과 수집 전 대기**: TaskOutput으로 각 결과 확인
+
+### Background Task 기반 병렬 실행 (MCP만 사용 시)
 
 ```typescript
 // 명시적 컨텍스트와 함께 에이전트 디스패치
@@ -462,6 +524,8 @@ avengers_dispatch_agent({
   constraints: ["기존 스타일 유지"]
 })
 ```
+
+**참고**: MCP 도구만 사용 시 상태만 등록되며, 실제 병렬 실행은 Claude가 순차적으로 처리합니다.
 
 ### 결과 수집
 
