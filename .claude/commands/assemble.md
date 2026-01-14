@@ -51,141 +51,158 @@ Phase 5-8: IronMan/Natasha/Groot 병렬 실행
 - ✅ **끝까지 진행**: 테스트 통과/검증 완료까지 멈추지 않음
 - ✅ **병렬 작업**: 독립적 작업은 동시에 진행 (Worktree)
 
-## Full Development 워크플로우
+## Full Development 워크플로우 (실제 Infinity War 구현)
+
+### ⚙️ 자동 실행 엔진 (Stop 없음)
+
+```
+[Phase 0: 분석]
+    ↓ (실패 시 재시도)
+[Phase 1: 리서치 (Jarvis)]
+    ↓ (실패 시 재시도)
+[Phase 2-3: 기획 (Captain + Dr.Strange)]
+    ↓ (실패 시 재시도)
+[Phase 4: 작업 분배 (Captain)]
+    ↓ (실패 시 재시도)
+[Phase 5: 병렬 개발 (IronMan/Natasha/Groot)]
+    ↓ (실패 시 재시도)
+[Phase 6: 테스트 실행 (Groot)]
+    ├─ 실패? → 버그 분석 → Phase 5로 돌아가서 수정 → 다시 Phase 6
+    └─ 성공? → 다음 단계
+    ↓
+[Phase 6.5: 빌드 검증 (Groot/IronMan)]
+    ├─ 실패? → 에러 분석 → Phase 5로 돌아가서 수정 → 다시 빌드
+    └─ 성공? → 다음 단계
+    ↓
+[Phase 7: 문서화 (Vision)]
+    ├─ 실패? → 다시 시도
+    └─ 성공? → 다음 단계
+    ↓
+[Phase 8: CI/CD (Hawkeye)]
+    └─ 완료 기준에 따라 자동 실행
+```
 
 ### Phase 1: 정보 수집 (Jarvis)
 
-```typescript
+Jarvis 호출 → 리서치 완료까지 계속 시도:
+
+```
 avengers_dispatch_agent({
   agent: "jarvis",
-  task: "리서치: [요청 내용]",
+  task: "리서치: $ARGUMENTS",
   mode: "foreground"
 })
+→ 완료될 때까지 대기
+→ 실패 시 자동 재시도
 ```
 
-### Phase 2: 요구사항 분석 (Captain + Dr.Strange) - 자동 추론
+### Phase 2-3: 기획 (Captain + Dr.Strange)
 
-리서치 결과를 기반으로 **Reasonable Defaults**로 자동 추론:
+리서치 결과 기반 즉시 기획 → **절대 사용자에게 질문하지 않음**:
 
-- **기술 스택**: 요청 내용으로부터 자동 선택 (웹/모바일/데스크톱/AI 등)
-- **범위**: 요청의 구체성으로 판단 (MVP/중간/완전)
-- **데이터베이스**: 프로젝트 타입으로 기본값 선택 (PostgreSQL/SQLite/MongoDB 등)
-- **인증**: 필요 여부 자동 판단
-- **배포**: 완료 기준에 따라 자동 결정
+**Reasonable Defaults 자동 적용**:
+- **기술 스택**: 요청 분석으로부터 자동 선택
+- **범위**: 요청 구체성으로 판단 (MVP/중간/완전)
+- **데이터베이스**: 프로젝트 타입별 기본값 선택
+- **인증**: 자동 필요성 판단
+- **배포**: 완료 기준 자동 결정
 
-**사용자 질문은 불가능한 경우에만** (예: 보안 정책, 법적 요구사항 등)
+### Phase 4: 작업 분배 (Captain)
 
-### Phase 3: 전략 수립 (Dr.Strange) - 자동 실행
+```
+for each task in planned_tasks:
+  avengers_assign_task({ ... })
+  avengers_dispatch_agent({
+    agent: assignee,
+    worktree: true,
+    mode: "background"
+  })
+→ 모든 에이전트 병렬 실행 시작
+```
 
-요구사항 분석 결과에 따라 즉시 전략 수립:
+### Phase 5: 병렬 개발 (IronMan/Natasha/Groot)
 
-```typescript
-avengers_skill_brainstorm({
-  phase: "finalize",
-  topic: "[요청 주제]",
-  context: {
-    analysis: "[Phase 2 분석 결과]",
-    scope: "[자동 결정된 범위]",
-    techStack: "[자동 선택된 기술 스택]"
+각 에이전트 **독립적으로** TDD 기반 개발:
+
+```
+각 워크트리에서 동시 진행:
+  1. Groot: 테스트 작성 (RED)
+  2. IronMan/Natasha: 구현 (GREEN)
+  3. Groot: 통과 확인 (REFACTOR)
+
+→ 모든 작업 완료까지 대기
+```
+
+### Phase 6: 테스트 실행 (Groot) - **무한 루프 정책**
+
+**이 단계에서 절대 포기하지 않음**:
+
+```
+while (tests_not_passed) {
+  1. 모든 테스트 실행
+  2. 결과 검증
+
+  if (tests_failed) {
+    → 버그 분석
+    → IronMan/Natasha에게 수정 요청
+    → Phase 5로 복귀
+    → 다시 테스트 실행
+    → 무한 루프 계속
+  } else {
+    → Phase 6.5로 진행
   }
-})
+}
 ```
 
-→ **설계 문서 생성** (아키텍처, 컴포넌트, 워크플로우)
+**핵심: 테스트가 통과할 때까지 절대 멈추지 않음**
 
-### Phase 4: 작업 분배 및 병렬 실행 (Captain)
+### Phase 6.5: 빌드 및 실행 검증 - **무한 루프 정책**
 
-전략을 기반으로 **즉시 작업 분배**:
+**이 단계에서도 절대 포기하지 않음**:
 
-```typescript
-avengers_assign_task({
-  title: "[구체적 작업]",
-  assignee: "[에이전트]",  // ironman, natasha, groot 등
-  dependencies: []
-})
+```
+while (not_fully_verified) {
+  1. 프로젝트 빌드
+  2. 로컬 실행 및 헬스체크
 
-// 각 에이전트에 즉시 디스패치
+  if (build_failed || runtime_error) {
+    → 에러 분석
+    → IronMan/Natasha에게 수정 요청
+    → Phase 5로 복귀
+    → 다시 빌드
+    → 무한 루프 계속
+  } else {
+    → Phase 7로 진행
+  }
+}
+```
+
+**핵심: 빌드와 실행이 완벽할 때까지 절대 멈추지 않음**
+
+### Phase 7: 문서화 (Vision)
+
+완료 기준에 따라 자동 생성:
+
+```
 avengers_dispatch_agent({
-  agent: "[할당 에이전트]",
-  task: "[작업 내용]",
-  worktree: true,  // 병렬 작업을 위해 워크트리 격리
-  mode: "background"  // 배경 실행으로 병렬 처리
+  agent: "vision",
+  task: "생성: README, API 문서, 아키텍처 다이어그램",
+  mode: "foreground"
 })
+→ 문서 생성될 때까지 계속 시도
 ```
 
-### Phase 5: 병렬 개발 (모든 에이전트 동시 진행)
+### Phase 8: CI/CD 파이프라인 (Hawkeye)
 
-**TDD 기반 병렬 작업**:
-- 🧪 Groot: 단위 테스트 작성 (RED)
-- 💻 IronMan/Natasha: 코드 구현 (GREEN)
-- ✅ Groot: 테스트 통과 확인 (REFACTOR)
-- 🔄 에이전트 간 결과 공유 (Worktree merge 준비)
-
-### Phase 6: 테스트 실행 (Groot) - 자동 반복
-
-**테스트 통과까지 계속 시도** (Infinity War 원칙):
-
-```typescript
-// 1. 모든 테스트 실행
-avengers_run_tests({
-  taskId: "T001",
-  projectPath: "./",
-  testType: "all",
-  coverage: true
-})
-
-// 2. 테스트 결과 검증
-avengers_validate_completion({
-  taskId: "T001",
-  testResults: { /* run_tests 결과 */ },
-  strictness: "moderate"  // 테스트 통과 필수
-})
-
-// 3. 실패 시 → Groot이 버그 분석 → IronMan/Natasha 수정 → 다시 테스트
-// → 통과할 때까지 반복!
 ```
-
-### Phase 6.5: 빌드 및 실행 검증 (Groot/IronMan) - 자동 실행
-
-**통과 기준에 따라 자동 진행**:
-
-```typescript
-// 1. 프로젝트 빌드
-avengers_build_project({
-  projectPath: "./",
-  buildType: "production"
-})
-
-// 2. 로컬 실행 및 헬스 체크
-avengers_run_local({
-  projectPath: "./",
-  mode: "preview"
-})
-
-// 3. 실패 시 → 에러 분석 → 수정 → 재빌드 (반복!)
+if (completionLevel === "full_cicd") {
+  avengers_generate_cicd({
+    platform: "github-actions",
+    features: { lint: true, test: true, build: true, deploy: true }
+  })
+  → 파이프라인 설정 완료까지 계속 시도
+}
 ```
-
-### Phase 7: 문서화 (Vision) - 자동 생성
-
-완료 기준에 따라 **자동 문서화**:
-- **API 문서**: OpenAPI/Swagger 자동 생성
-- **README**: 프로젝트 설정 및 사용 가이드
-- **아키텍처 다이어그램**: 설계 기반 생성
-- **코드 주석**: 복잡한 로직 자동 주석 추가
-
-### Phase 8: 배포 파이프라인 (Hawkeye) - 완료 기준별 자동 실행
-
-**완료 기준이 `full_cicd`인 경우만 실행**:
-
-```typescript
-avengers_generate_cicd({
-  projectPath: "./",
-  platform: "github-actions",  // 자동 감지
-  features: { lint: true, test: true, build: true, deploy: true }
-})
-```
-
-→ **자동 배포 파이프라인 생성** (GitHub Actions, Docker 등)
 
 ## 완료 기준별 Phase 실행
 
@@ -219,15 +236,29 @@ avengers_generate_cicd({
    → 즉시 버그 분석 → 수정 → 테스트 (반복!)
 ```
 
-## 핵심 특징: Infinity War 원칙
+## 핵심 특징: Infinity War 원칙 - 실제 구현
 
-| 특징 | 설명 |
-|------|------|
-| **즉시 실행** | 분석 후 바로 에이전트 디스패치 (질문 없음) |
-| **자동 추론** | Reasonable defaults로 부족한 정보 자동 보충 |
-| **병렬 작업** | 독립적 작업은 Worktree로 동시 진행 |
-| **끝까지 진행** | 테스트 통과/검증 완료까지 멈추지 않음 |
-| **자동 수정** | 에러/실패 시 자동 분석 → 수정 → 재시도 |
+| 특징 | 설명 | 구현 |
+|------|------|------|
+| **즉시 실행** | 분석 후 바로 에이전트 디스패치 | Phase 0 완료 → Phase 1 즉시 시작 |
+| **자동 추론** | Reasonable defaults로 정보 자동 보충 | 사용자 질문 0개 |
+| **무한 루프 (Phase 6)** | 테스트 실패 → 분석 → 수정 → 재시도 | 통과할 때까지 무한 반복 |
+| **무한 루프 (Phase 6.5)** | 빌드 실패 → 분석 → 수정 → 재시도 | 성공할 때까지 무한 반복 |
+| **병렬 작업** | Phase 5에서 모든 에이전트 동시 진행 | IronMan + Natasha + Groot 병렬 |
+| **절대 멈추지 않음** | 모든 단계에서 완료 기준 충족까지 계속 | 예외 없이 적용 |
+
+### Infinity War 정책의 핵심: "끝날 때까지 끝나지 않음"
+
+```
+성공 ← Phase 완료 조건 충족까지
+  ↑
+  └─ 실패 → 분석 → 수정 → 재시도 ─┘
+```
+
+**절대 포기하는 경우:**
+- 없음. 모든 경우에 계속 시도함
+- 시간 제한도 없음
+- 재시도 횟수 제한도 없음
 
 ## 주의사항
 
