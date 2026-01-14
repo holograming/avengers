@@ -431,6 +431,38 @@ export async function handleBuildProject(args: Record<string, unknown>) {
   let allStdout = "";
   let allStderr = "";
 
+  // Handle C++ package dependencies (vcpkg/Homebrew)
+  if (buildSystem.type === "cpp" && installDeps) {
+    const cppDepResult = await handleCppDependencies(absolutePath);
+
+    if (cppDepResult.toolchainFile) {
+      // Update CMake command to include toolchain file
+      buildSystem.installCommand = `cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${cppDepResult.toolchainFile}"`;
+      allStdout += cppDepResult.message + "\n";
+    } else if (cppDepResult.warning) {
+      // Non-critical warning (vcpkg not found but continuing)
+      allStdout += cppDepResult.warning + "\n";
+    }
+
+    if (cppDepResult.error && cppDepResult.critical) {
+      // Critical error - stop build
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            buildSystem: buildSystem.name,
+            error: "C++ 패키지 설치 실패",
+            details: cppDepResult.error,
+            suggestion: cppDepResult.suggestion,
+            output: allStdout.slice(-2000)
+          }, null, 2)
+        }],
+        isError: true
+      };
+    }
+  }
+
   // Install dependencies if needed
   if (installDeps && buildSystem.installCommand) {
     const installResult = executeCommand(
@@ -601,4 +633,242 @@ function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Handle C++ package dependencies using vcpkg/Homebrew
+ * Auto-installs vcpkg if not found on Windows
+ * POC: Auto-install fmt library for testing
+ */
+async function handleCppDependencies(projectPath: string): Promise<{
+  message?: string;
+  warning?: string;
+  error?: string;
+  critical?: boolean;
+  suggestion?: string;
+  toolchainFile?: string;
+}> {
+  const os = process.platform;
+  const isWindows = os === "win32";
+  const isMacOS = os === "darwin";
+
+  // 1. Check if CMakeLists.txt exists and has find_package calls
+  const cmakeListsPath = path.join(projectPath, "CMakeLists.txt");
+  if (!fs.existsSync(cmakeListsPath)) {
+    return {
+      message: "CMakeLists.txt not found - skipping package setup"
+    };
+  }
+
+  const cmakeContent = fs.readFileSync(cmakeListsPath, "utf-8");
+  if (!cmakeContent.includes("find_package(")) {
+    return {
+      message: "No external packages required (no find_package calls) - skipping package setup"
+    };
+  }
+
+  // 2. Detect package manager
+  let packageManager: "vcpkg" | "homebrew" | "none" = "none";
+  let toolchainFile: string | null = null;
+
+  if (isWindows) {
+    try {
+      execSync("vcpkg --version", { encoding: "utf-8", stdio: "pipe" });
+      packageManager = "vcpkg";
+
+      // Find vcpkg root and toolchain file
+      const vcpkgRoot = process.env.VCPKG_ROOT;
+      if (vcpkgRoot) {
+        toolchainFile = path.join(vcpkgRoot, "scripts", "buildsystems", "vcpkg.cmake");
+      }
+    } catch {
+      // vcpkg not found - auto-install it
+      const installResult = await autoInstallVcpkg();
+      if (installResult.success && installResult.toolchainFile) {
+        packageManager = "vcpkg";
+        toolchainFile = installResult.toolchainFile;
+      } else {
+        return {
+          warning: installResult.warning || "⚠️ Failed to auto-install vcpkg. Please install manually.",
+          suggestion: installResult.suggestion || "Visit: https://github.com/microsoft/vcpkg"
+        };
+      }
+    }
+  } else if (isMacOS) {
+    try {
+      execSync("brew --version", { encoding: "utf-8", stdio: "pipe" });
+      packageManager = "homebrew";
+    } catch {
+      return {
+        warning: "⚠️ Homebrew not installed. Please install it manually.",
+        suggestion: "Visit: https://brew.sh"
+      };
+    }
+  }
+
+  // 3. If still no package manager, return warning
+  if (packageManager === "none") {
+    return {
+      warning: "⚠️ No package manager found (vcpkg/Homebrew). Packages must be installed manually.",
+      suggestion: "Windows: Install vcpkg - https://github.com/microsoft/vcpkg\nmacOS: Install Homebrew - https://brew.sh"
+    };
+  }
+
+  // 4. POC: Auto-install fmt (lightweight, fast)
+  const message: string[] = [
+    `✅ Detected package manager: ${packageManager}`,
+    `📦 Installing fmt library (POC)...`
+  ];
+
+  try {
+    if (packageManager === "vcpkg") {
+      // Check if fmt is already installed
+      try {
+        execSync("vcpkg list", { encoding: "utf-8", stdio: "pipe" }).includes("fmt");
+        message.push("✅ fmt already installed (skipping)");
+      } catch {
+        // fmt not found, install it
+        message.push("Installing fmt:x64-windows...");
+        execSync("vcpkg install fmt:x64-windows", {
+          encoding: "utf-8",
+          cwd: projectPath,
+          timeout: 600000  // 10 minutes for installation
+        });
+        message.push("✅ fmt installed successfully");
+      }
+    } else if (packageManager === "homebrew") {
+      // Check if fmt is installed
+      try {
+        execSync("brew list fmt", { encoding: "utf-8", stdio: "pipe" });
+        message.push("✅ fmt already installed (skipping)");
+      } catch {
+        // fmt not installed, install it
+        message.push("Installing fmt...");
+        execSync("brew install fmt", {
+          encoding: "utf-8",
+          cwd: projectPath,
+          timeout: 600000
+        });
+        message.push("✅ fmt installed successfully");
+      }
+    }
+
+    // 5. Return success with toolchain info
+    if (toolchainFile && fs.existsSync(toolchainFile)) {
+      message.push(`✅ CMake toolchain: ${toolchainFile}`);
+      return {
+        message: message.join("\n"),
+        toolchainFile
+      };
+    } else {
+      message.push("ℹ️ No explicit toolchain needed (Homebrew)");
+      return {
+        message: message.join("\n")
+      };
+    }
+  } catch (error) {
+    // Installation failed but non-critical for POC
+    return {
+      warning: `⚠️ Package installation encountered an issue: ${error instanceof Error ? error.message : String(error)}\n\nContinuing with build (manual install may be needed)`,
+      toolchainFile
+    };
+  }
+}
+
+/**
+ * Auto-install vcpkg on Windows if not found
+ */
+async function autoInstallVcpkg(): Promise<{
+  success: boolean;
+  toolchainFile?: string;
+  warning?: string;
+  suggestion?: string;
+}> {
+  try {
+    const message: string[] = [];
+
+    // 1. Determine vcpkg installation location
+    const vcpkgRoot = "C:\\vcpkg";  // Standard Windows location
+
+    message.push("📦 vcpkg not found - auto-installing...");
+
+    // 2. Check if already partially installed
+    if (fs.existsSync(vcpkgRoot)) {
+      message.push("✅ vcpkg directory exists, attempting bootstrap...");
+
+      try {
+        // Try to bootstrap existing installation
+        execSync(`.\\bootstrap-vcpkg.bat`, {
+          cwd: vcpkgRoot,
+          encoding: "utf-8",
+          timeout: 300000  // 5 minutes for bootstrap
+        });
+        message.push("✅ vcpkg bootstrapped successfully");
+      } catch (bootstrapError) {
+        // Bootstrap failed, try full installation
+        message.push("⚠️ Bootstrap failed, attempting full clone...");
+        fs.rmSync(vcpkgRoot, { recursive: true, force: true });
+      }
+    }
+
+    // 3. If directory doesn't exist, clone from GitHub
+    if (!fs.existsSync(vcpkgRoot)) {
+      message.push("🔄 Cloning vcpkg repository...");
+
+      execSync(
+        `git clone https://github.com/microsoft/vcpkg.git "${vcpkgRoot}"`,
+        {
+          encoding: "utf-8",
+          timeout: 600000,  // 10 minutes for clone
+          stdio: "pipe"
+        }
+      );
+      message.push("✅ vcpkg cloned successfully");
+
+      // 4. Bootstrap vcpkg
+      message.push("⚙️ Bootstrapping vcpkg...");
+      execSync(`.\\bootstrap-vcpkg.bat`, {
+        cwd: vcpkgRoot,
+        encoding: "utf-8",
+        timeout: 300000
+      });
+      message.push("✅ vcpkg bootstrapped successfully");
+    }
+
+    // 5. Verify vcpkg installation
+    const versionOutput = execSync(`"${vcpkgRoot}\\vcpkg" --version`, {
+      encoding: "utf-8",
+      timeout: 30000
+    });
+    message.push(`✅ vcpkg version: ${versionOutput.trim().split("\n")[0]}`);
+
+    // 6. Set VCPKG_ROOT environment variable
+    const toolchainFile = path.join(vcpkgRoot, "scripts", "buildsystems", "vcpkg.cmake");
+
+    // Set environment variable for current process
+    process.env.VCPKG_ROOT = vcpkgRoot;
+
+    // Try to set system environment variable (requires admin)
+    try {
+      execSync(`setx VCPKG_ROOT "${vcpkgRoot}"`, {
+        encoding: "utf-8",
+        timeout: 10000
+      });
+      message.push(`✅ Set VCPKG_ROOT environment variable: ${vcpkgRoot}`);
+    } catch {
+      message.push(`⚠️ Could not set system VCPKG_ROOT (requires admin). Set manually if needed.`);
+    }
+
+    return {
+      success: true,
+      toolchainFile,
+      warning: message.join("\n")
+    };
+  } catch (error) {
+    return {
+      success: false,
+      warning: `❌ Failed to auto-install vcpkg: ${error instanceof Error ? error.message : String(error)}`,
+      suggestion: `Please install vcpkg manually from: https://github.com/microsoft/vcpkg\n\nQuick install:\n1. git clone https://github.com/microsoft/vcpkg.git C:\\vcpkg\n2. cd C:\\vcpkg\n3. .\\bootstrap-vcpkg.bat\n4. setx VCPKG_ROOT C:\\vcpkg`
+    };
+  }
 }

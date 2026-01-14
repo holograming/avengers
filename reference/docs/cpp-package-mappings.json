@@ -1,0 +1,91 @@
+{
+  "fmt": {
+    "vcpkg": {
+      "base": ["fmt"]
+    },
+    "homebrew": "fmt",
+    "apt": ["libfmt-dev"],
+    "conan": "fmt/10.1.1",
+    "installTime": "1-2min",
+    "description": "Modern C++ formatting library"
+  },
+  "nlohmann_json": {
+    "vcpkg": {
+      "base": ["nlohmann-json"]
+    },
+    "homebrew": "nlohmann-json",
+    "apt": ["nlohmann-json3-dev"],
+    "conan": "nlohmann_json/3.11.2",
+    "installTime": "1min",
+    "description": "JSON for Modern C++"
+  },
+  "spdlog": {
+    "vcpkg": {
+      "base": ["spdlog"]
+    },
+    "homebrew": "spdlog",
+    "apt": ["libspdlog-dev"],
+    "conan": "spdlog/1.12.0",
+    "installTime": "2-3min",
+    "description": "Fast C++ logging library"
+  },
+  "Boost": {
+    "vcpkg": {
+      "base": ["boost"]
+    },
+    "homebrew": "boost",
+    "apt": ["libboost-all-dev"],
+    "conan": "boost/1.82.0",
+    "installTime": "5-10min",
+    "description": "Boost C++ Libraries"
+  },
+  "OpenSSL": {
+    "vcpkg": {
+      "base": ["openssl"]
+    },
+    "homebrew": "openssl@3",
+    "apt": ["libssl-dev"],
+    "conan": "openssl/3.1.0",
+    "installTime": "3-5min",
+    "description": "Secure Socket Layer and Transport Layer Security"
+  },
+  "CURL": {
+    "vcpkg": {
+      "base": ["curl"]
+    },
+    "homebrew": "curl",
+    "apt": ["libcurl4-openssl-dev"],
+    "conan": "libcurl/8.0.1",
+    "installTime": "2-3min",
+    "description": "Command line tool and library for transferring data with URLs"
+  },
+  "Qt6": {
+    "vcpkg": {
+      "base": ["qt6-base"],
+      "components": {
+        "Core": "qt6-base",
+        "Gui": "qt6-base",
+        "Qml": "qt6-declarative",
+        "Quick": "qt6-declarative",
+        "Network": "qt6-networkauth",
+        "Sql": "qt6-base",
+        "WebEngine": "qt6-webengine"
+      }
+    },
+    "homebrew": "qt@6",
+    "apt": ["libqt6-dev", "qt6-base-dev"],
+    "conan": "qt/6.5.0",
+    "installTime": "10-20min",
+    "description": "Qt 6 - Cross-platform GUI framework"
+  },
+  "GoogleTest": {
+    "vcpkg": {
+      "base": ["gtest"]
+    },
+    "homebrew": "googletest",
+    "apt": ["libgtest-dev"],
+    "conan": "gtest/1.13.0",
+    "installTime": "2-3min",
+    "description": "Google Testing and Mocking Framework"
+  }
+}

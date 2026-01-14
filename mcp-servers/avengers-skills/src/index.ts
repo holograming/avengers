@@ -18,6 +18,7 @@ import {
 import { runTddTool, handleRunTdd } from "./tools/run-tdd.js";
 import { brainstormTool, handleBrainstorm } from "./tools/brainstorm.js";
 import { codeReviewTool, handleCodeReview } from "./tools/code-review.js";
+import { cppPackagesTool, handleCppPackages } from "./tools/cpp-packages.js";
 
 // MCP 서버 생성
 const server = new Server(
@@ -39,6 +40,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       runTddTool,
       brainstormTool,
       codeReviewTool,
+      cppPackagesTool,
     ],
   };
 });
@@ -54,6 +56,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return handleBrainstorm(args);
     case "avengers_skill_code_review":
       return handleCodeReview(args);
+    case "avengers_skill_cpp_packages":
+      return handleCppPackages(args);
     default:
       return {
         content: [{ type: "text", text: `Unknown tool: ${name}` }],
