@@ -3,45 +3,40 @@
 
 #include <QString>
 #include <QList>
-#include <QObject>
-#include "../models/ProductModel.h"
+#include <memory>
+#include "../models/product.h"
 
-class ProductService : public QObject
-{
-    Q_OBJECT
-
+class ProductService {
 public:
-    explicit ProductService(ProductModel *productModel, QObject *parent = nullptr);
+    static ProductService& getInstance();
 
-    // Product operations
-    bool addProduct(const Product &product);
-    bool updateProduct(const Product &product);
+    // Product query operations
+    QList<Product> getAllProducts() const;
+    QList<Product> getProductsByCategory(const QString& category) const;
+    QList<Product> getProductsByRegion(const QString& region) const;
+    QList<Product> searchProducts(const QString& query) const;
+    Product getProductById(int productId) const;
+
+    // Product management operations
+    bool createProduct(const Product& product);
+    bool updateProduct(const Product& product);
     bool deleteProduct(int productId);
-    Product getProduct(int productId);
+    bool markAsSold(int productId);
 
-    // Queries
-    QList<Product> getAllProducts();
-    QList<Product> getProductsByCategory(const QString &category);
-    QList<QString> getCategories();
-    int getProductCount();
-
-    // Stock management
-    bool updateStock(int productId, int quantity);
-    bool decreaseStock(int productId, int quantity);
-    QList<Product> getLowStockProducts(int threshold = 10);
-
-    // Analytics
-    QList<Product> getTopProducts(int limit = 10);
-
-signals:
-    void productAdded(const Product &product);
-    void productUpdated(const Product &product);
-    void productDeleted(int productId);
-    void stockLow(int productId, int quantity);
-    void errorOccurred(const QString &message);
+    // Filter operations
+    QList<Product> filterByPriceRange(double minPrice, double maxPrice) const;
+    QList<Product> filterByCondition(const QString& condition) const;
+    QList<Product> getSellerProducts(int sellerId) const;
 
 private:
-    ProductModel *m_model;
+    ProductService();
+    ~ProductService();
+
+    // Copy and move prevention
+    ProductService(const ProductService&) = delete;
+    ProductService& operator=(const ProductService&) = delete;
+    ProductService(ProductService&&) = delete;
+    ProductService& operator=(ProductService&&) = delete;
 };
 
 #endif // PRODUCTSERVICE_H

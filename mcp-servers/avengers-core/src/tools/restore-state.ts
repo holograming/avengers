@@ -27,6 +27,7 @@ interface RestoreResult {
     missing: number;
     details: Array<{ path: string; exists: boolean; taskId: string }>;
   };
+  assembleInfo?: SavedState["assembleInfo"];
 }
 
 export const restoreStateTool: Tool = {
@@ -129,6 +130,7 @@ export async function handleRestoreState(args: Record<string, unknown>) {
       agents: { restored: 0, skipped: 0 },
       tasks: { restored: 0, skipped: 0 },
       worktrees: { valid: 0, missing: 0, details: [] },
+      ...(savedState.assembleInfo && { assembleInfo: savedState.assembleInfo }),
     };
 
     // 워크트리 유효성 검사

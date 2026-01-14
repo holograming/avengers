@@ -18,9 +18,18 @@ Captain이 요청을 분석하여 필요한 에이전트만 호출합니다.
 // 첫 번째 단계로 반드시 호출
 avengers_analyze_request({
   request: "사용자 요청 내용",
-  forceResearch: true  // 항상 comprehensive 리서치
+  forceResearch: true,  // 항상 comprehensive 리서치
+  executionMode: "auto"  // 또는 "planning", "execution"
 })
 ```
+
+**executionMode 파라미터 (Plan 모드 통합)**
+
+- `"auto"` (기본값): 일반 모드에서 요청 유형에 따라 자동 결정
+- `"planning"`: Plan 모드에서 계획만 수립 (Phase 0-3)
+- `"execution"`: 일반 모드에서 전체 실행 (Phase 0-8)
+
+Claude가 현재 Plan 모드에 있다면 자동으로 `"planning"` 모드를 선택하고, 일반 모드에서는 `"auto"` 또는 `"execution"`을 전달합니다.
 
 **분석 결과에 따른 워크플로우 선택:**
 
@@ -348,15 +357,18 @@ avengers_dispatch_agent({
 ### 핵심 규칙
 1. **Captain 판단 우선**: 모든 미션은 `avengers_analyze_request` 호출로 시작
 2. **유연한 워크플로우**: 요청 유형에 맞는 에이전트만 호출 (Research Only, Quick Fix 등)
-3. **Infinity War 원칙**: 끝날 때까지 끝나지 않음. 검증 통과 전 완료 선언 금지
+3. **Plan 모드 통합**:
+   - Plan 모드에서는 자동으로 `executionMode: "planning"` 적용
+   - 계획 단계 완료 후 상태 저장 → Plan 모드 종료 → "실행해줘" 요청
+4. **Infinity War 원칙**: 끝날 때까지 끝나지 않음. 검증 통과 전 완료 선언 금지
 
 ### 개발 규칙
-4. **TDD 필수**: 모든 기능은 테스트 먼저 작성
-5. **Worktree 격리**: 병렬 작업은 반드시 Worktree로 분리
-6. **코드 리뷰 필수**: 병합 전 리뷰 승인 필요
-7. **의존성 관리**: 작업 간 의존성 명시적으로 정의
-8. **상태 확인**: 작업 시작 전 에이전트 상태 확인
-9. **프로젝트 내 상태 저장**: Plan 파일과 세션 정보는 프로젝트의 `.claude/` 디렉토리에 저장
+5. **TDD 필수**: 모든 기능은 테스트 먼저 작성
+6. **Worktree 격리**: 병렬 작업은 반드시 Worktree로 분리
+7. **코드 리뷰 필수**: 병합 전 리뷰 승인 필요
+8. **의존성 관리**: 작업 간 의존성 명시적으로 정의
+9. **상태 확인**: 작업 시작 전 에이전트 상태 확인
+10. **프로젝트 내 상태 저장**: Plan 파일과 세션 정보는 프로젝트의 `.claude/` 디렉토리에 저장
 
 ### 완료 검증
 ```typescript

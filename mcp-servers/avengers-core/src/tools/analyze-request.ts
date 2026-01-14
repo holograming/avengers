@@ -47,6 +47,11 @@ export type CompletionLevel =
   | "with_docs";
 
 /**
+ * Execution mode types
+ */
+export type ExecutionMode = "auto" | "planning" | "execution";
+
+/**
  * Workflow preset configuration
  */
 interface WorkflowPreset {
@@ -148,6 +153,8 @@ export interface RequestAnalysis {
   // 완료 기준
   completionLevel: CompletionLevel;
   suggestedCriteria: string[];
+  // 실행 모드
+  mode: "planning" | "execution";
 }
 
 /**
@@ -200,6 +207,12 @@ export const analyzeRequestTool: Tool = {
         enum: ["code_only", "with_tests", "with_execution", "with_docs"],
         description: "완료 기준 (선택적, 기본값: with_tests)",
         default: "with_tests"
+      },
+      executionMode: {
+        type: "string",
+        enum: ["auto", "planning", "execution"],
+        description: "실행 모드 (선택적, 기본값: auto). Plan 모드에서는 'planning', 일반 모드에서는 'auto' 권장",
+        default: "auto"
       }
     },
     required: ["request"]
@@ -218,6 +231,7 @@ interface AnalyzeParams {
   };
   forceResearch?: boolean;
   completionLevel?: CompletionLevel;
+  executionMode?: ExecutionMode;
 }
 
 /**
@@ -513,7 +527,7 @@ function determineCompletionLevel(
  */
 export async function handleAnalyzeRequest(args: Record<string, unknown>) {
   const params = args as unknown as AnalyzeParams;
-  const { request, context, forceResearch = true, completionLevel } = params;
+  const { request, context, forceResearch = true, completionLevel, executionMode = "auto" } = params;
 
   if (!request || request.trim().length === 0) {
     return {
@@ -551,6 +565,19 @@ export async function handleAnalyzeRequest(args: Record<string, unknown>) {
   const determinedCompletionLevel = determineCompletionLevel(type, completionLevel);
   const suggestedCriteria = COMPLETION_CRITERIA_MAP[determinedCompletionLevel];
 
+  // Determine execution mode
+  let mode: "planning" | "execution";
+  if (executionMode === "planning") {
+    mode = "planning";
+  } else if (executionMode === "execution") {
+    mode = "execution";
+  } else {
+    // "auto"인 경우: 워크플로우 타입에 따라 자동 결정
+    mode = (workflow === "research-only" || workflow === "planning-only")
+      ? "planning"
+      : "execution";
+  }
+
   // Build analysis result
   const analysis: RequestAnalysis = {
     type,
@@ -570,7 +597,8 @@ export async function handleAnalyzeRequest(args: Record<string, unknown>) {
     unknownTerms,
     confidence: unknownTerms.length > 0 ? 0.7 : 0.9,
     completionLevel: determinedCompletionLevel,
-    suggestedCriteria
+    suggestedCriteria,
+    mode
   };
 
   // Build response message
@@ -633,6 +661,7 @@ function buildAnalysisMessage(analysis: RequestAnalysis, preset: WorkflowPreset)
   }
 
   lines.push(``);
+  lines.push(`**실행 모드**: ${analysis.mode === "planning" ? "계획 수립" : "전체 실행"}`);
   lines.push(`**완료 기준**: ${analysis.completionLevel}`);
   lines.push(`**권장 완료 항목**:`);
   analysis.suggestedCriteria.forEach(criteria => {

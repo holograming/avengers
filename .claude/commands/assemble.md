@@ -10,36 +10,50 @@ disable-model-invocation: false
 
 ## 실행 워크플로우
 
-### Phase 0: 요청 분석 (Captain)
+### Phase 0: 요청 분석 (Captain) - Plan 모드 통합
 
 **첫 번째 단계로 반드시 `avengers_analyze_request` 호출**
+
+Claude가 현재 Plan 모드 여부를 자동으로 인식하여 `executionMode` 파라미터를 결정합니다:
 
 ```typescript
 avengers_analyze_request({
   request: "$ARGUMENTS",
-  forceResearch: true
+  forceResearch: true,
+  executionMode: <Claude가 자동 결정>
+    // Plan 모드에 있으면: "planning"
+    // 일반 모드에 있으면: "auto"
 })
 ```
 
-분석 결과에 따라 적절한 워크플로우 선택:
+분석 결과의 `mode` 필드에 따라 적절한 워크플로우 선택:
 
-### 조건부 워크플로우
+### 실행 모드별 워크플로우
+
+분석 결과의 `mode` 필드에 따라 결정됩니다:
+
+**mode: "planning"** (Plan 모드에서는 항상 이 모드)
+```
+모든 요청 → Jarvis (리서치) → Dr.Strange (계획) → 상태 저장 → Plan 파일 작성
+```
+
+**mode: "execution"** (일반 모드에서는 요청 유형에 따라)
+```
+Research Only → Jarvis → 응답 완료
+Planning Only → Jarvis → Dr.Strange → 응답 완료
+Quick Fix → IronMan/Natasha → Groot → 완료
+Documentation → Jarvis → Vision → 완료
+Full Development → 전체 팀 협업
+```
+
+### Plan 모드에서 사용하는 방법
 
 ```
-┌─ Research Only (예: "X가 뭐야?")
-│   └→ Jarvis → Captain → 응답 완료
-│
-├─ Planning Only (예: "X 어떻게 할지 계획 세워")
-│   └→ Jarvis → Dr.Strange → Captain → 응답 완료
-│
-├─ Quick Fix (예: "이 버그 고쳐줘")
-│   └→ IronMan/Natasha → Groot → Captain → 완료
-│
-├─ Documentation (예: "API 문서 작성해줘")
-│   └→ Jarvis → Vision → Captain → 완료
-│
-└─ Full Development (예: "X 서비스 만들어줘")
-    └→ 전체 팀 협업
+1. /assemble <요청> 호출 → 자동으로 mode: "planning" 설정
+2. Jarvis 리서치 → Dr.Strange 계획 수립 → 상태 저장
+3. Plan 파일에 실행 계획 작성
+4. Plan 모드 종료
+5. "실행해줘" 요청 → 저장된 상태 복구 후 전체 실행
 ```
 
 ## Full Development 워크플로우

@@ -1,13 +1,13 @@
-cmake_minimum_required(VERSION 3.20)
-project(TossplaceClone)
+cmake_minimum_required(VERSION 3.16)
+project(tossplace-desktop LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Qt6 packages
+# Find Qt
 find_package(Qt6 COMPONENTS
     Core
     Gui
@@ -15,56 +15,48 @@ find_package(Qt6 COMPONENTS
     Quick
     Sql
     Network
-    Test
     REQUIRED
 )
+
+# Project version
+set(TOSSPLACE_VERSION "0.1.0")
+add_definitions(-DTOSSPLACE_VERSION="${TOSSPLACE_VERSION}")
 
 # Source files
 set(SOURCES
     src/main.cpp
-    src/ApplicationController.cpp
-    src/core/database/Database.cpp
-    src/core/models/ProductModel.cpp
-    src/core/models/OrderModel.cpp
-    src/core/models/PaymentModel.cpp
-    src/core/services/OrderService.cpp
-    src/core/services/PaymentService.cpp
-    src/core/services/ProductService.cpp
+    src/application.cpp
+    src/core/database/database.cpp
+    src/core/models/product.cpp
+    src/core/services/authservice.cpp
+    src/core/services/productservice.cpp
 )
 
 set(HEADERS
-    src/ApplicationController.h
-    src/core/database/Database.h
-    src/core/models/ProductModel.h
-    src/core/models/OrderModel.h
-    src/core/models/PaymentModel.h
-    src/core/services/OrderService.h
-    src/core/services/PaymentService.h
-    src/core/services/ProductService.h
+    src/application.h
+    src/core/database/database.h
+    src/core/models/user.h
+    src/core/models/product.h
+    src/core/services/authservice.h
+    src/core/services/productservice.h
 )
 
-set(QML_FILES
+set(QML_SOURCES
     src/ui/main.qml
-    src/ui/pages/MainPage.qml
-    src/ui/components/TossHeader.qml
-    src/ui/styles/TossTheme.qml
-    src/ui/styles/Colors.qml
+    src/ui/LoginScreen.qml
+    src/ui/ProductListScreen.qml
+    src/ui/ProductDetailScreen.qml
 )
 
-set(RESOURCES
-    resources.qrc
-)
-
-# Create executable
-add_executable(tossplace-clone
+# Main executable
+add_executable(${PROJECT_NAME}
     ${SOURCES}
     ${HEADERS}
-    ${QML_FILES}
-    ${RESOURCES}
+    ${QML_SOURCES}
 )
 
-# Link Qt libraries
-target_link_libraries(tossplace-clone
+# Link libraries
+target_link_libraries(${PROJECT_NAME}
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
@@ -74,21 +66,16 @@ target_link_libraries(tossplace-clone
 )
 
 # Include directories
-target_include_directories(tossplace-clone PRIVATE
+target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
 )
-
-# Windows specific settings
-if(WIN32)
-    set_target_properties(tossplace-clone PROPERTIES WIN32_EXECUTABLE ON)
-endif()
-
-# macOS specific settings
-if(APPLE)
-    set_target_properties(tossplace-clone PROPERTIES MACOSX_BUNDLE ON)
-endif()
 
 # Enable testing
 enable_testing()
 add_subdirectory(tests)
+
+# Installation
+install(TARGETS ${PROJECT_NAME}
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION bin
+)

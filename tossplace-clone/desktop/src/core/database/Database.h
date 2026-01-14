@@ -1,29 +1,41 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include <QString>
 #include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QString>
 #include <memory>
 
-class Database
-{
+class Database {
 public:
+    static Database& getInstance();
+
+    // Initialization
+    bool initialize(const QString& dbPath);
+    bool isConnected() const;
+    void close();
+
+    // Query execution
+    QSqlQuery executeQuery(const QString& query);
+    bool executeUpdate(const QString& query);
+
+    // Database operations
+    bool createTables();
+    bool clearDatabase();
+
+private:
     Database();
     ~Database();
 
-    bool initialize(const QString &dbPath = "");
-    bool executeQuery(const QString &query);
-    void close();
+    // Copy and move prevention
+    Database(const Database&) = delete;
+    Database& operator=(const Database&) = delete;
+    Database(Database&&) = delete;
+    Database& operator=(Database&&) = delete;
 
-    QSqlDatabase& getDatabase();
-    bool isOpen() const;
-
-private:
-    std::unique_ptr<QSqlDatabase> m_db;
-    QString m_dbPath;
-
-    bool createSchema();
-    bool createTablesIfNotExist();
+    QSqlDatabase db;
+    bool initialized;
 };
 
 #endif // DATABASE_H

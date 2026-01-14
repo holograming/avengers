@@ -30,6 +30,20 @@ export interface SavedState {
     savedBy: string;
     reason?: string;
   };
+  // Assemble 전용 상태 정보
+  assembleInfo?: {
+    request: string;
+    analysisData?: Record<string, unknown>;
+    mode?: "planning" | "execution";
+    workflow?: string;
+    completionLevel?: string;
+    researchResults?: string;
+    plannedTasks?: Array<{
+      title: string;
+      assignee: string;
+      description?: string;
+    }>;
+  };
 }
 
 export const saveStateTool: Tool = {
@@ -45,6 +59,29 @@ export const saveStateTool: Tool = {
       filename: {
         type: "string",
         description: "Optional custom filename (without extension). Defaults to timestamp-based name."
+      },
+      assembleInfo: {
+        type: "object",
+        description: "Optional Assemble-specific state information (for Plan mode integration)",
+        properties: {
+          request: { type: "string" },
+          analysisData: { type: "object" },
+          mode: { type: "string", enum: ["planning", "execution"] },
+          workflow: { type: "string" },
+          completionLevel: { type: "string" },
+          researchResults: { type: "string" },
+          plannedTasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                assignee: { type: "string" },
+                description: { type: "string" }
+              }
+            }
+          }
+        }
       }
     },
     required: []
@@ -52,9 +89,10 @@ export const saveStateTool: Tool = {
 };
 
 export async function handleSaveState(args: Record<string, unknown>) {
-  const { reason, filename } = args as {
+  const { reason, filename, assembleInfo } = args as {
     reason?: string;
     filename?: string;
+    assembleInfo?: SavedState["assembleInfo"];
   };
 
   try {
@@ -126,6 +164,7 @@ export async function handleSaveState(args: Record<string, unknown>) {
         savedBy: "avengers-core",
         reason,
       },
+      ...(assembleInfo && { assembleInfo }),
     };
 
     // 파일명 결정
